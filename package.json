@@ -1,0 +1,21 @@
+{
+  "name": "shouquan-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "POS 收银系统 - 授权管理 + 官网（Cloudflare Workers）",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 migrations apply shouquan-db",
+    "db:seed": "wrangler d1 execute shouquan-db --file=./migrations/seed.sql",
+    "preview": "wrangler preview"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "jose": "^5.9.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.100.0"
+  }
+}
