@@ -32,6 +32,8 @@ preview_database_id = "577571fe-75c8-4c28-8634-49dd0d6fff83"
 # JWT_SECRET / ADMIN_PASSWORD / V1_API_SECRET / V1_API_KEY 须通过 wrangler secret put 设置
 [vars]
 SITE_NAME = "ShouYinPOS"
+SITE_URL = "https://www.lequ.pw"
+CORS_ORIGINS = "https://www.lequ.pw,https://admin.lequ.pw,http://localhost:5173,http://localhost:8787"
 
 # ===== Cron Triggers =====
 [triggers]
