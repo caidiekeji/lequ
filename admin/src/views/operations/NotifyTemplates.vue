@@ -8,7 +8,6 @@
     <div v-if="showForm" class="form-card" style="margin-bottom:24px">
       <h3>{{ editingTemplate ? '编辑模板' : '添加模板' }}</h3>
       <form @submit.prevent="saveTemplate">
-        <div class="form-group"><label>模板名称</label><input v-model="form.name" required placeholder="如：订单支付成功通知" /></div>
         <div class="form-group"><label>模板编码</label><input v-model="form.code" required :disabled="!!editingTemplate" placeholder="如：order_paid" /></div>
         <div class="form-group"><label>通知渠道</label>
           <select v-model="form.channel" required>
@@ -18,7 +17,7 @@
           </select>
         </div>
         <div class="form-group"><label>模板内容</label><textarea v-model="form.content" rows="5" required placeholder="支持 {{变量}} 语法"></textarea></div>
-        <div class="form-group"><label>描述</label><input v-model="form.description" type="text" placeholder="选填" /></div>
+        <div class="form-group"><label>邮件主题</label><input v-model="form.subject" placeholder="选填（仅邮件渠道）" /></div>
         <div class="action-row">
           <button type="submit" class="btn-primary" :disabled="submitting">{{ submitting ? '保存中...' : '保存' }}</button>
           <button type="button" class="btn-secondary" @click="cancelForm">取消</button>
@@ -28,13 +27,12 @@
 
     <div class="table-container">
       <table class="data-table">
-        <thead><tr><th>名称</th><th>编码</th><th>渠道</th><th>描述</th><th>操作</th></tr></thead>
+        <thead><tr><th>编码</th><th>渠道</th><th>主题</th><th>操作</th></tr></thead>
         <tbody>
           <tr v-for="t in templates" :key="t.id">
-            <td style="font-weight:600">{{ t.name }}</td>
-            <td class="mono">{{ t.code }}</td>
+            <td style="font-weight:600">{{ t.code }}</td>
             <td>{{ channelText(t.channel) }}</td>
-            <td>{{ t.description || '-' }}</td>
+            <td>{{ t.subject || '-' }}</td>
             <td>
               <button class="btn-link" @click="editTemplate(t)">编辑</button>
               <button class="btn-link danger" @click="deleteTemplate(t)">删除</button>
@@ -54,7 +52,7 @@ const templates = ref([])
 const showForm = ref(false)
 const editingTemplate = ref(null)
 const submitting = ref(false)
-const form = ref({ name: '', code: '', channel: 'email', content: '', description: '' })
+const form = ref({ code: '', channel: 'email', subject: '', content: '' })
 
 onMounted(() => { fetchTemplates() })
 
@@ -65,14 +63,14 @@ async function fetchTemplates() {
 
 function editTemplate(t) {
   editingTemplate.value = t
-  form.value = { name: t.name, code: t.code, channel: t.channel, content: t.content, description: t.description || '' }
+  form.value = { code: t.code, channel: t.channel, subject: t.subject || '', content: t.content }
   showForm.value = true
 }
 
 function cancelForm() {
   showForm.value = false
   editingTemplate.value = null
-  form.value = { name: '', code: '', channel: 'email', content: '', description: '' }
+  form.value = { code: '', channel: 'email', subject: '', content: '' }
 }
 
 async function saveTemplate() {
@@ -87,7 +85,7 @@ async function saveTemplate() {
 }
 
 async function deleteTemplate(t) {
-  if (!confirm(`确认删除模板「${t.name}」？`)) return
+  if (!confirm(`确认删除模板「${t.code}」？`)) return
   try { await operationsApi.deleteNotifyTemplate(t.id); fetchTemplates() }
   catch (e) { alert(e.message) }
 }

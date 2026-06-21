@@ -19,7 +19,7 @@ export default {
   // notify config
   notifyConfig() { return request.get('/admin/config/notify') },
   saveNotifyConfig(data) { return request.put('/admin/config/notify', data) },
-  testNotify(channel, data) { return request.post(`/admin/config/notify/test/${channel}`, data) },
+  testNotify(data) { return request.post('/admin/config/notify/test', data) },
   // logs
   logs(params) { return request.get('/admin/logs/admin', params) },
   loginLogs(params) { return request.get('/admin/logs/login', params) },

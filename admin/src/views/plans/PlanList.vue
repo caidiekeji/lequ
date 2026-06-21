@@ -32,7 +32,7 @@ import request from '@/api/request'
 const plans = ref([])
 
 onMounted(async () => {
-  try { const r = await request.get('/plans'); plans.value = r.data || [] }
+  try { const r = await request.get('/admin/plans'); plans.value = r.data || [] }
   catch (e) { console.error(e) }
 })
 </script>

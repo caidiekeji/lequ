@@ -244,6 +244,11 @@ router.put('/orders/:id/price', requirePermission('order:update-price'), async (
   const orderId = parseInt(c.req.param('id'))
   const { price } = await c.req.json()
 
+  // 校验价格：必须为有效正数
+  if (typeof price !== 'number' || !Number.isFinite(price) || price <= 0) {
+    return c.json({ code: 40000, message: '价格必须为正数' }, 400)
+  }
+
   const order = await db.prepare("SELECT * FROM orders WHERE id = ? AND status = 'pending'").bind(orderId).first()
   if (!order) {
     return c.json({ code: 40400, message: '订单不存在或已处理' }, 404)
@@ -401,6 +406,18 @@ router.put('/plans/:id', requirePermission('plan:update'), async (c) => {
   return c.json({ message: '套餐更新成功' })
 })
 
+router.delete('/plans/:id', requirePermission('plan:delete'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const plan = await db.prepare('SELECT id, name, code FROM plans WHERE id = ?').bind(id).first()
+  if (!plan) return c.json({ code: 40400, message: '套餐不存在' }, 404)
+
+  await db.prepare('DELETE FROM plans WHERE id = ?').bind(id).run()
+  await logAdminAction(c, 'plan.delete', 'plan', id, { name: plan.name, code: plan.code })
+  await invalidateCache(c.env, 'cache:plans:list')
+  return c.json({ message: '套餐已删除' })
+})
+
 router.put('/plans/:id/status', requirePermission('plan:update'), async (c) => {
   const db = c.env.DB
   const id = parseInt(c.req.param('id'))
@@ -473,6 +490,17 @@ router.put('/features/:id', requirePermission('plan:update'), async (c) => {
   return c.json({ message: '功能已更新' })
 })
 
+router.delete('/features/:id', requirePermission('plan:delete'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const feature = await db.prepare('SELECT id, code, name FROM features WHERE id = ?').bind(id).first()
+  if (!feature) return c.json({ code: 40400, message: '功能不存在' }, 404)
+
+  await db.prepare('DELETE FROM features WHERE id = ?').bind(id).run()
+  await logAdminAction(c, 'feature.delete', 'feature', id, { code: feature.code, name: feature.name })
+  return c.json({ message: '功能已删除' })
+})
+
 // ==================== 优惠券 ====================
 
 router.get('/coupons', requirePermission('coupon:read'), async (c) => {
@@ -529,6 +557,17 @@ router.put('/coupons/:id', requirePermission('coupon:update'), async (c) => {
 
   await logAdminAction(c, 'coupon.update', 'coupon', id, { code: coupon.code })
   return c.json({ message: '优惠券已更新' })
+})
+
+router.delete('/coupons/:id', requirePermission('coupon:delete'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const coupon = await db.prepare('SELECT id, code FROM coupons WHERE id = ?').bind(id).first()
+  if (!coupon) return c.json({ code: 40400, message: '优惠券不存在' }, 404)
+
+  await db.prepare('DELETE FROM coupons WHERE id = ?').bind(id).run()
+  await logAdminAction(c, 'coupon.delete', 'coupon', id, { code: coupon.code })
+  return c.json({ message: '优惠券已删除' })
 })
 
 // ==================== 系统配置 ====================
@@ -668,6 +707,37 @@ router.put('/roles/:id/permissions', requirePermission('role:update'), async (c)
 
   await logAdminAction(c, 'role.permissions', 'role', id, { role_code: role.code, permission_ids })
   return c.json({ message: '角色权限已更新' })
+})
+
+router.put('/roles/:id', requirePermission('role:update'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const body = await c.req.json()
+
+  const role = await db.prepare('SELECT id, name, code FROM roles WHERE id = ?').bind(id).first()
+  if (!role) return c.json({ code: 40400, message: '角色不存在' }, 404)
+  if (role.code === 'super_admin') return c.json({ code: 40300, message: '不能修改超级管理员角色' }, 403)
+
+  await db.prepare(
+    "UPDATE roles SET name = COALESCE(?, name), description = COALESCE(?, description) WHERE id = ?"
+  ).bind(body.name ?? null, body.description ?? null, id).run()
+
+  await logAdminAction(c, 'role.update', 'role', id, { before: { name: role.name }, after: { name: body.name || role.name } })
+  return c.json({ message: '角色已更新' })
+})
+
+router.delete('/roles/:id', requirePermission('role:delete'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const role = await db.prepare('SELECT id, name, code FROM roles WHERE id = ?').bind(id).first()
+  if (!role) return c.json({ code: 40400, message: '角色不存在' }, 404)
+  if (role.code === 'super_admin') return c.json({ code: 40300, message: '不能删除超级管理员角色' }, 403)
+
+  await db.prepare('DELETE FROM role_permissions WHERE role_id = ?').bind(id).run()
+  await db.prepare('DELETE FROM roles WHERE id = ?').bind(id).run()
+
+  await logAdminAction(c, 'role.delete', 'role', id, { name: role.name, code: role.code })
+  return c.json({ message: '角色已删除' })
 })
 
 // ==================== 操作日志 ====================
@@ -1241,6 +1311,37 @@ router.put('/license-policies/:id', requirePermission('policy:update'), async (c
   return c.json({ message: '策略已更新' })
 })
 
+router.post('/license-policies', requirePermission('policy:create'), async (c) => {
+  const db = c.env.DB
+  const body = await c.req.json()
+  const { name, max_instances, bind_mode, heartbeat_interval, max_kick_count, allowed_domains, allowed_ips, note } = body
+  if (!name) return c.json({ code: 40000, message: '策略名称不能为空' }, 400)
+
+  const result = await db.prepare(
+    `INSERT INTO license_policies (name, max_instances, bind_mode, heartbeat_interval, max_kick_count, allowed_domains, allowed_ips, note)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`
+  ).bind(
+    name, max_instances || 1, bind_mode || 'strict', heartbeat_interval || 60, max_kick_count || 3,
+    allowed_domains ? JSON.stringify(allowed_domains) : null,
+    allowed_ips ? JSON.stringify(allowed_ips) : null,
+    note || ''
+  ).first()
+
+  await logAdminAction(c, 'policy.create', 'policy', result?.id, { name })
+  return c.json({ message: '策略已创建' })
+})
+
+router.delete('/license-policies/:id', requirePermission('policy:delete'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const policy = await db.prepare('SELECT id, name FROM license_policies WHERE id = ?').bind(id).first()
+  if (!policy) return c.json({ code: 40400, message: '策略不存在' }, 404)
+
+  await db.prepare('DELETE FROM license_policies WHERE id = ?').bind(id).run()
+  await logAdminAction(c, 'policy.delete', 'policy', id, { name: policy.name })
+  return c.json({ message: '策略已删除' })
+})
+
 // ==================== 运营管理 ====================
 
 router.get('/notices', requirePermission('notice:read'), async (c) => {
@@ -1252,7 +1353,7 @@ router.get('/notices', requirePermission('notice:read'), async (c) => {
 
   const total = await db.prepare('SELECT COUNT(*) as cnt FROM notices').first()
   const list = await db.prepare(
-    'SELECT * FROM notices ORDER BY sort_order ASC, created_at DESC LIMIT ? OFFSET ?'
+    'SELECT id, title, content, target_type as type, status, created_at FROM notices ORDER BY created_at DESC LIMIT ? OFFSET ?'
   ).bind(ps, offset).all()
 
   return c.json({ data: { list: list.results, total: total.cnt, page: p, pageSize: ps } })
@@ -1260,12 +1361,12 @@ router.get('/notices', requirePermission('notice:read'), async (c) => {
 
 router.post('/notices', requirePermission('notice:create'), async (c) => {
   const db = c.env.DB
-  const { title, content, type, sort_order } = await c.req.json()
+  const { title, content, type, status } = await c.req.json()
   if (!title || !content) return c.json({ code: 40000, message: '标题和内容不能为空' }, 400)
 
   const result = await db.prepare(
-    'INSERT INTO notices (title, content, type, sort_order) VALUES (?, ?, ?, ?) RETURNING id'
-  ).bind(title, content, type || 'info', sort_order || 0).first()
+    'INSERT INTO notices (title, content, target_type, status) VALUES (?, ?, ?, ?) RETURNING id'
+  ).bind(title, content, type || 'info', status || 'active').first()
 
   await logAdminAction(c, 'notice.create', 'notice', result?.id, { title, type })
   return c.json({ message: '公告已创建' })
@@ -1274,24 +1375,47 @@ router.post('/notices', requirePermission('notice:create'), async (c) => {
 router.put('/notices/:id', requirePermission('notice:update'), async (c) => {
   const db = c.env.DB
   const id = parseInt(c.req.param('id'))
-  const { title, content, type, status, sort_order } = await c.req.json()
+  const { title, content, type, status } = await c.req.json()
 
   const notice = await db.prepare('SELECT * FROM notices WHERE id = ?').bind(id).first()
   if (!notice) return c.json({ code: 40400, message: '公告不存在' }, 404)
 
   await db.prepare(
-    "UPDATE notices SET title = COALESCE(?, title), content = COALESCE(?, content), type = COALESCE(?, type), status = COALESCE(?, status), sort_order = COALESCE(?, sort_order), updated_at = datetime('now') WHERE id = ?"
-  ).bind(title ?? null, content ?? null, type ?? null, status ?? null, sort_order ?? null, id).run()
+    "UPDATE notices SET title = COALESCE(?, title), content = COALESCE(?, content), target_type = COALESCE(?, target_type), status = COALESCE(?, status) WHERE id = ?"
+  ).bind(title ?? null, content ?? null, type ?? null, status ?? null, id).run()
 
   await logAdminAction(c, 'notice.update', 'notice', id, { before: { title: notice.title }, after: { title: title || notice.title } })
   return c.json({ message: '公告已更新' })
+})
+
+router.delete('/notices/:id', requirePermission('notice:delete'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const notice = await db.prepare('SELECT id, title FROM notices WHERE id = ?').bind(id).first()
+  if (!notice) return c.json({ code: 40400, message: '公告不存在' }, 404)
+
+  await db.prepare('DELETE FROM notices WHERE id = ?').bind(id).run()
+  await logAdminAction(c, 'notice.delete', 'notice', id, { title: notice.title })
+  return c.json({ message: '公告已删除' })
+})
+
+router.post('/notices/:id/toggle', requirePermission('notice:update'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const notice = await db.prepare('SELECT id, title, status FROM notices WHERE id = ?').bind(id).first()
+  if (!notice) return c.json({ code: 40400, message: '公告不存在' }, 404)
+
+  const newStatus = notice.status === 'active' ? 'inactive' : 'active'
+  await db.prepare("UPDATE notices SET status = ?, updated_at = datetime('now') WHERE id = ?").bind(newStatus, id).run()
+  await logAdminAction(c, 'notice.toggle', 'notice', id, { title: notice.title, before: notice.status, after: newStatus })
+  return c.json({ message: newStatus === 'active' ? '公告已启用' : '公告已停用', data: { status: newStatus } })
 })
 
 // ==================== 通知模板 ====================
 
 router.get('/notify-templates', requirePermission('notify:read'), async (c) => {
   const db = c.env.DB
-  const list = await db.prepare('SELECT * FROM notify_templates ORDER BY created_at DESC').all()
+  const list = await db.prepare('SELECT id, code as name, channel, subject, content, status FROM notify_templates').all()
   return c.json({ data: list.results })
 })
 
@@ -1304,11 +1428,35 @@ router.put('/notify-templates/:id', requirePermission('notify:update'), async (c
   if (!tpl) return c.json({ code: 40400, message: '模板不存在' }, 404)
 
   await db.prepare(
-    "UPDATE notify_templates SET subject = COALESCE(?, subject), content = COALESCE(?, content), updated_at = datetime('now') WHERE id = ?"
+    "UPDATE notify_templates SET subject = COALESCE(?, subject), content = COALESCE(?, content) WHERE id = ?"
   ).bind(body.subject ?? null, body.content ?? null, id).run()
 
   await logAdminAction(c, 'notify_template.update', 'notify_template', id, { changes: Object.keys(body) })
   return c.json({ message: '模板已更新' })
+})
+
+router.post('/notify-templates', requirePermission('notify:create'), async (c) => {
+  const db = c.env.DB
+  const { name, channel, subject, content } = await c.req.json()
+  if (!name || !channel) return c.json({ code: 40000, message: '名称和渠道不能为空' }, 400)
+
+  const result = await db.prepare(
+    'INSERT INTO notify_templates (code, channel, subject, content) VALUES (?, ?, ?, ?) RETURNING id'
+  ).bind(name, channel, subject || '', content || '').first()
+
+  await logAdminAction(c, 'notify_template.create', 'notify_template', result?.id, { code: name, channel })
+  return c.json({ message: '模板已创建' })
+})
+
+router.delete('/notify-templates/:id', requirePermission('notify:delete'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const tpl = await db.prepare('SELECT id, name FROM notify_templates WHERE id = ?').bind(id).first()
+  if (!tpl) return c.json({ code: 40400, message: '模板不存在' }, 404)
+
+  await db.prepare('DELETE FROM notify_templates WHERE id = ?').bind(id).run()
+  await logAdminAction(c, 'notify_template.delete', 'notify_template', id, { name: tpl.name })
+  return c.json({ message: '模板已删除' })
 })
 
 // ==================== 工单管理 ====================
@@ -1343,13 +1491,39 @@ router.post('/tickets/:id/reply', requirePermission('ticket:reply'), async (c) =
   if (!ticket) return c.json({ code: 40400, message: '工单不存在' }, 404)
 
   await db.prepare(
-    "INSERT INTO ticket_replies (ticket_id, admin_id, admin_username, content) VALUES (?, ?, ?, ?)"
-  ).bind(id, admin.id, admin.username, content).run()
+    "INSERT INTO ticket_replies (ticket_id, from_type, from_id, content) VALUES (?, 'admin', ?, ?)"
+  ).bind(id, admin.id, content).run()
 
   await db.prepare("UPDATE tickets SET status = 'replied', updated_at = datetime('now') WHERE id = ?").bind(id).run()
 
   await logAdminAction(c, 'ticket.reply', 'ticket', id, { content_length: content.length })
   return c.json({ message: '回复成功' })
+})
+
+router.get('/tickets/:id', requirePermission('ticket:read'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const ticket = await db.prepare(
+    `SELECT t.*, u.email as user_email FROM tickets t LEFT JOIN users u ON t.user_id = u.id WHERE t.id = ?`
+  ).bind(id).first()
+  if (!ticket) return c.json({ code: 40400, message: '工单不存在' }, 404)
+
+  const replies = await db.prepare(
+    'SELECT * FROM ticket_replies WHERE ticket_id = ? ORDER BY created_at ASC'
+  ).bind(id).all()
+
+  return c.json({ data: { ...ticket, replies: replies.results } })
+})
+
+router.post('/tickets/:id/close', requirePermission('ticket:reply'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const ticket = await db.prepare('SELECT id, title, status FROM tickets WHERE id = ?').bind(id).first()
+  if (!ticket) return c.json({ code: 40400, message: '工单不存在' }, 404)
+
+  await db.prepare("UPDATE tickets SET status = 'closed', updated_at = datetime('now') WHERE id = ?").bind(id).run()
+  await logAdminAction(c, 'ticket.close', 'ticket', id, { title: ticket.title, before: ticket.status })
+  return c.json({ message: '工单已关闭' })
 })
 
 // ==================== 渠道管理 ====================
@@ -1362,15 +1536,15 @@ router.get('/channels', requirePermission('channel:read'), async (c) => {
 
 router.post('/channels', requirePermission('channel:create'), async (c) => {
   const db = c.env.DB
-  const { name, code, commission_rate, note } = await c.req.json()
+  const { name, code, commission_rate } = await c.req.json()
   if (!name || !code) return c.json({ code: 40000, message: 'name 和 code 不能为空' }, 400)
 
   const exists = await db.prepare('SELECT id FROM channels WHERE code = ?').bind(code).first()
   if (exists) return c.json({ code: 40900, message: '渠道编码已存在' }, 409)
 
   const result = await db.prepare(
-    'INSERT INTO channels (name, code, commission_rate, note) VALUES (?, ?, ?, ?) RETURNING id'
-  ).bind(name, code, commission_rate || 0, note || '').first()
+    'INSERT INTO channels (name, code, commission_rate) VALUES (?, ?, ?) RETURNING id'
+  ).bind(name, code, commission_rate || 0).first()
 
   await logAdminAction(c, 'channel.create', 'channel', result?.id, { name, code })
   return c.json({ message: '渠道已创建' })
@@ -1379,17 +1553,41 @@ router.post('/channels', requirePermission('channel:create'), async (c) => {
 router.put('/channels/:id', requirePermission('channel:update'), async (c) => {
   const db = c.env.DB
   const id = parseInt(c.req.param('id'))
-  const { name, commission_rate, status, note } = await c.req.json()
+  const { name, commission_rate, status } = await c.req.json()
 
   const channel = await db.prepare('SELECT * FROM channels WHERE id = ?').bind(id).first()
   if (!channel) return c.json({ code: 40400, message: '渠道不存在' }, 404)
 
   await db.prepare(
-    "UPDATE channels SET name = COALESCE(?, name), commission_rate = COALESCE(?, commission_rate), status = COALESCE(?, status), note = COALESCE(?, note), updated_at = datetime('now') WHERE id = ?"
-  ).bind(name ?? null, commission_rate ?? null, status ?? null, note ?? null, id).run()
+    "UPDATE channels SET name = COALESCE(?, name), commission_rate = COALESCE(?, commission_rate), status = COALESCE(?, status) WHERE id = ?"
+  ).bind(name ?? null, commission_rate ?? null, status ?? null, id).run()
 
-  await logAdminAction(c, 'channel.update', 'channel', id, { changes: Object.keys({ name, commission_rate, status, note }) })
+  await logAdminAction(c, 'channel.update', 'channel', id, { changes: Object.keys({ name, commission_rate, status }) })
   return c.json({ message: '渠道已更新' })
+})
+
+router.get('/channels/:id', requirePermission('channel:read'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const channel = await db.prepare('SELECT * FROM channels WHERE id = ?').bind(id).first()
+  if (!channel) return c.json({ code: 40400, message: '渠道不存在' }, 404)
+  return c.json({ data: channel })
+})
+
+router.put('/channels/:id/status', requirePermission('channel:update'), async (c) => {
+  const db = c.env.DB
+  const id = parseInt(c.req.param('id'))
+  const { status } = await c.req.json()
+  if (!status || !['active', 'disabled'].includes(status)) {
+    return c.json({ code: 40000, message: '状态值不合法' }, 400)
+  }
+
+  const channel = await db.prepare('SELECT id, name, status as old_status FROM channels WHERE id = ?').bind(id).first()
+  if (!channel) return c.json({ code: 40400, message: '渠道不存在' }, 404)
+
+  await db.prepare("UPDATE channels SET status = ?, updated_at = datetime('now') WHERE id = ?").bind(status, id).run()
+  await logAdminAction(c, 'channel.status', 'channel', id, { name: channel.name, before: channel.old_status, after: status })
+  return c.json({ message: status === 'active' ? '渠道已启用' : '渠道已停用' })
 })
 
 router.get('/commissions', requirePermission('commission:read'), async (c) => {
@@ -1405,7 +1603,7 @@ router.get('/commissions', requirePermission('commission:read'), async (c) => {
 
   const total = await db.prepare(`SELECT COUNT(*) as cnt FROM commissions c ${where}`).bind(...params).first()
   const list = await db.prepare(
-    `SELECT c.*, ch.name as channel_name FROM commissions c LEFT JOIN channels ch ON c.channel_id = ch.id ${where} ORDER BY c.created_at DESC LIMIT ? OFFSET ?`
+    `SELECT c.*, ch.name as channel_name FROM commissions c LEFT JOIN channels ch ON c.channel_code = ch.code ${where} ORDER BY c.created_at DESC LIMIT ? OFFSET ?`
   ).bind(...params, ps, offset).all()
 
   return c.json({ data: { list: list.results, total: total.cnt, page: p, pageSize: ps } })
@@ -1420,31 +1618,51 @@ router.post('/commissions/:id/settle', requirePermission('commission:settle'), a
 
   await db.prepare("UPDATE commissions SET status = 'settled', settled_at = datetime('now'), updated_at = datetime('now') WHERE id = ?").bind(id).run()
 
-  await logAdminAction(c, 'commission.settle', 'commission', id, { channel_id: commission.channel_id, amount: commission.amount })
+  await logAdminAction(c, 'commission.settle', 'commission', id, { channel_code: commission.channel_code, amount: commission.amount })
   return c.json({ message: '佣金已结算' })
 })
 
-// ==================== 基础设施 - 支付配置 ====================
-
-router.get('/config/payment', requirePermission('config:payment'), async (c) => {
+router.post('/commissions/batch-settle', requirePermission('commission:settle'), async (c) => {
   const db = c.env.DB
-  const row = await db.prepare("SELECT value FROM system_config WHERE key = 'payment_config'").first()
-  const config = row ? JSON.parse(row.value) : {}
-  return c.json({ data: config })
-})
-
-router.put('/config/payment', requirePermission('config:payment'), async (c) => {
-  const db = c.env.DB
-  const body = await c.req.json()
-  const existing = await db.prepare("SELECT id FROM system_config WHERE key = 'payment_config'").first()
-  if (existing) {
-    await db.prepare("UPDATE system_config SET value = ?, updated_at = datetime('now') WHERE key = 'payment_config'").bind(JSON.stringify(body)).run()
-  } else {
-    await db.prepare("INSERT INTO system_config (key, value) VALUES ('payment_config', ?)").bind(JSON.stringify(body)).run()
+  const { ids } = await c.req.json()
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return c.json({ code: 40000, message: 'ids 必须为非空数组' }, 400)
   }
-  await logAdminAction(c, 'config.payment.update', 'config', null, { fields: Object.keys(body) })
-  return c.json({ message: '支付配置已保存' })
+
+  const placeholders = ids.map(() => '?').join(',')
+  await db.prepare(`UPDATE commissions SET status = 'settled', settled_at = datetime('now'), updated_at = datetime('now') WHERE id IN (${placeholders}) AND status = 'pending'`).bind(...ids).run()
+
+  await logAdminAction(c, 'commission.batch_settle', 'commission', null, { ids })
+  return c.json({ message: `批量结算成功：${ids.length} 条佣金` })
 })
+
+router.get('/commissions/export', requirePermission('commission:read'), async (c) => {
+  const db = c.env.DB
+  const { status } = c.req.query()
+  let where = ''
+  const params = []
+  if (status) { where = 'WHERE c.status = ?'; params.push(status) }
+
+  const list = await db.prepare(
+    `SELECT c.*, ch.name as channel_name FROM commissions c LEFT JOIN channels ch ON c.channel_code = ch.code ${where} ORDER BY c.created_at DESC`
+  ).bind(...params).all()
+
+  const header = 'ID,ChannelName,OrderNo,Amount,Status,CreatedAt,SettledAt\r\n'
+  const rows = (list.results || []).map(c =>
+    `${c.id},"${(c.channel_name||'').replace(/"/g,'""')}","${c.order_no}",${c.amount},${c.status},"${c.created_at}","${c.settled_at||''}"`
+  ).join('\r\n')
+
+  return new Response(header + rows, {
+    headers: {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': 'attachment; filename="commissions.csv"',
+    },
+  })
+})
+
+// 支付配置路由已移至 admin-payment.js，此处不再重复定义
+// GET  /api/admin/config/payment  → 已废弃，请使用 /api/admin/payment-config
+// PUT  /api/admin/config/payment  → 已废弃，请使用 /api/admin/payment-config
 
 // ==================== 基础设施 - 通知配置 ====================
 

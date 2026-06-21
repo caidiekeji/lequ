@@ -84,7 +84,7 @@ const filteredTickets = computed(() => {
 onMounted(() => { fetchTickets() })
 
 async function fetchTickets() {
-  try { const r = await operationsApi.tickets(); tickets.value = r.data || [] }
+  try { const r = await operationsApi.tickets(); tickets.value = r.data?.list || r.data || [] }
   catch (e) { console.error(e) }
 }
 

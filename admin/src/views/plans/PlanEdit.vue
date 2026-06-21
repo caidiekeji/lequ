@@ -35,7 +35,7 @@ const form = ref({ name: '', code: '', price: 0, original_price: 0, duration_day
 
 onMounted(async () => {
   if (isEdit.value) {
-    try { const r = await request.get('/plans'); const p = (r.data || []).find(x => x.id == route.params.id); if (p) Object.assign(form.value, p) }
+    try { const r = await request.get(`/admin/plans/${route.params.id}`); if (r.data) Object.assign(form.value, r.data) }
     catch (e) { console.error(e) }
   }
 })
@@ -43,8 +43,8 @@ onMounted(async () => {
 async function savePlan() {
   submitting.value = true
   try {
-    if (isEdit.value) await request.put(`/plans/${route.params.id}`, form.value)
-    else await request.post('/plans', form.value)
+    if (isEdit.value) await request.put(`/admin/plans/${route.params.id}`, form.value)
+    else await request.post('/admin/plans', form.value)
     router.push('/plans')
   } catch (e) { alert(e.message) }
   finally { submitting.value = false }

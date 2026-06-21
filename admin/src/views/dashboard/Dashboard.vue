@@ -63,9 +63,20 @@ onMounted(async () => {
       dashboardApi.trends({ days: 30 }),
       dashboardApi.todos(),
     ])
-    if (s.data) Object.assign(summary.value, s.data)
-    trends.value = t.data || []
-    todos.value = todo.data || []
+    if (s.data) {
+      summary.value.today_gmv = s.data.todayGMV || 0
+      summary.value.new_users = s.data.todayNewUsers || 0
+      summary.value.new_licenses = s.data.todayNewLicenses || 0
+      summary.value.active_instances = s.data.activeInstances || 0
+    }
+    const trendData = t.data || {}
+    trends.value = trendData.gmv || []
+    const todoData = todo.data || {}
+    todos.value = [
+      { type: 'warning', text: '待确认收款', count: todoData.pendingConfirm || 0 },
+      { type: 'danger', text: '即将到期授权', count: todoData.expiringSoon || 0 },
+      { type: 'info', text: '心跳异常实例', count: todoData.heartbeatAnomaly || 0 },
+    ].filter(item => item.count > 0)
   } catch (e) {
     console.error(e)
   }
@@ -82,7 +93,7 @@ function formatShortDate(dateStr) {
 }
 
 function barHeight(value) {
-  const max = Math.max(...trends.map(i => i.value), 1)
+  const max = Math.max(...trends.value.map(i => i.value), 1)
   return ((value || 0) / max) * 100
 }
 </script>

@@ -20,7 +20,7 @@
         </div>
         <div class="form-group">
           <label class="toggle">
-            <input type="checkbox" v-model="form.active" />
+            <input type="checkbox" :checked="form.status === 'active'" @change="form.status = $event.target.checked ? 'active' : 'inactive'" />
             <span class="toggle-slider"></span>
             <span class="toggle-label">启用</span>
           </label>
@@ -39,11 +39,11 @@
           <tr v-for="n in notices" :key="n.id">
             <td style="font-weight:600">{{ n.title }}</td>
             <td><span :class="['status-badge', noticeTypeClass(n.type)]">{{ noticeTypeText(n.type) }}</span></td>
-            <td><span :class="['status-badge', n.active ? 'active' : '']">{{ n.active ? '启用' : '停用' }}</span></td>
+            <td><span :class="['status-badge', n.status === 'active' ? 'active' : '']">{{ n.status === 'active' ? '启用' : '停用' }}</span></td>
             <td>{{ formatDate(n.created_at) }}</td>
             <td>
               <button class="btn-link" @click="editNotice(n)">编辑</button>
-              <button class="btn-link" @click="toggleNotice(n)">{{ n.active ? '停用' : '启用' }}</button>
+              <button class="btn-link" @click="toggleNotice(n)">{{ n.status === 'active' ? '停用' : '启用' }}</button>
               <button class="btn-link danger" @click="deleteNotice(n)">删除</button>
             </td>
           </tr>
@@ -61,25 +61,25 @@ const notices = ref([])
 const showForm = ref(false)
 const editingNotice = ref(null)
 const submitting = ref(false)
-const form = ref({ title: '', content: '', type: 'info', active: true })
+const form = ref({ title: '', content: '', type: 'info', status: 'active' })
 
 onMounted(() => { fetchNotices() })
 
 async function fetchNotices() {
-  try { const r = await operationsApi.notices(); notices.value = r.data || [] }
+  try { const r = await operationsApi.notices(); notices.value = r.data?.list || r.data || [] }
   catch (e) { console.error(e) }
 }
 
 function editNotice(n) {
   editingNotice.value = n
-  form.value = { title: n.title, content: n.content, type: n.type || 'info', active: n.active }
+  form.value = { title: n.title, content: n.content, type: n.type || 'info', status: n.status || 'active' }
   showForm.value = true
 }
 
 function cancelForm() {
   showForm.value = false
   editingNotice.value = null
-  form.value = { title: '', content: '', type: 'info', active: true }
+  form.value = { title: '', content: '', type: 'info', status: 'active' }
 }
 
 async function saveNotice() {

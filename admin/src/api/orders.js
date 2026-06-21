@@ -8,6 +8,6 @@ export default {
   refund(id, data) { return request.post(`/admin/orders/${id}/refund`, data) },
   export(params) { return request.get('/admin/orders/export', params) },
   reconcile(params) { return request.get('/admin/orders/reconcile', params) },
-  invoices(params) { return request.get('/admin/orders/invoices', params) },
+  invoices(params) { return request.get('/admin/invoices', params) },
   stats() { return request.get('/admin/orders/stats') },
 }

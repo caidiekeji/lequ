@@ -13,11 +13,11 @@
         <tbody>
           <tr v-for="log in filteredLogs" :key="log.id">
             <td>{{ formatDateTime(log.created_at) }}</td>
-            <td style="font-weight:600">{{ log.username || '-' }}</td>
+            <td style="font-weight:600">{{ log.account || '-' }}</td>
             <td class="mono">{{ log.ip || '-' }}</td>
             <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="log.user_agent">{{ log.user_agent || '-' }}</td>
             <td>
-              <span :class="['status-badge', log.success ? 'active' : 'expired']">{{ log.success ? '成功' : '失败' }}</span>
+              <span :class="['status-badge', log.status === 'success' ? 'active' : 'expired']">{{ log.status === 'success' ? '成功' : '失败' }}</span>
             </td>
           </tr>
         </tbody>
@@ -44,7 +44,7 @@ const totalPages = ref(1)
 const pageSize = 20
 
 const filteredLogs = computed(() => {
-  return logs.value.filter(l => !search.value || l.username?.includes(search.value))
+  return logs.value.filter(l => !search.value || l.account?.includes(search.value))
 })
 
 onMounted(() => { fetchLogs() })
