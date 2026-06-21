@@ -15,7 +15,6 @@
 name = "shouquan"
 main = "src/index.js"
 compatibility_date = "2025-06-01"
-compatibility_flags = ["nodejs_compat"]
 
 # ===== D1 数据库 =====
 # 创建数据库: npx wrangler d1 create shouquan-db

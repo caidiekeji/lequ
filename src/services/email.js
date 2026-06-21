@@ -165,12 +165,12 @@ async function sendViaSMTP(env, { host, port, user, pass }, { to, subject, htmlC
     // 如果 server 不支持 AUTH，EHLO 响应中不会包含 AUTH
     // 尝试 AUTH（如果有凭证）
     if (user && pass) {
-      // 可选：先尝试 AUTH PLAIN（更简单）
+      // 先尝试 AUTH PLAIN
       // PLAIN 格式: \0username\0password
       const authPlain = '\0' + user + '\0' + pass
-      try {
-        resp = await sendCommand('AUTH PLAIN ' + b64(authPlain))
-      } catch (_e) {
+      resp = await sendCommand('AUTH PLAIN ' + b64(authPlain))
+      // 检查响应码：235 = 成功，其他 = 失败
+      if (!resp || !resp.startsWith('235')) {
         // AUTH PLAIN 失败，尝试 AUTH LOGIN
         resp = await sendCommand('AUTH LOGIN')
         resp = await sendCommand(b64(user))

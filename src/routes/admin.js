@@ -385,10 +385,10 @@ router.put('/plans/:id', requirePermission('plan:update'), async (c) => {
      features = COALESCE(?, features), description = COALESCE(?, description),
      updated_at = datetime('now') WHERE id = ?`
   ).bind(
-    body.name || null, body.price || null, body.original_price || null,
-    body.duration_days || null, body.max_stores || null, body.max_terminals || null,
-    body.max_products || null, body.max_members || null,
-    body.features ? JSON.stringify(body.features) : null, body.description || null, id
+    body.name ?? null, body.price ?? null, body.original_price ?? null,
+    body.duration_days ?? null, body.max_stores ?? null, body.max_terminals ?? null,
+    body.max_products ?? null, body.max_members ?? null,
+    body.features ? JSON.stringify(body.features) : null, body.description ?? null, id
   ).run()
 
   await logAdminAction(c, 'plan.update', 'plan', id, {
@@ -467,7 +467,7 @@ router.put('/features/:id', requirePermission('plan:update'), async (c) => {
 
   await db.prepare(
     "UPDATE features SET name = COALESCE(?, name), description = COALESCE(?, description), sort_order = COALESCE(?, sort_order), updated_at = datetime('now') WHERE id = ?"
-  ).bind(body.name || null, body.description || null, body.sort_order || null, id).run()
+  ).bind(body.name ?? null, body.description ?? null, body.sort_order ?? null, id).run()
 
   await logAdminAction(c, 'feature.update', 'feature', id, { before: { name: feature.name }, after: { name: body.name || feature.name } })
   return c.json({ message: '功能已更新' })
@@ -524,7 +524,7 @@ router.put('/coupons/:id', requirePermission('coupon:update'), async (c) => {
      status = COALESCE(?, status), updated_at = datetime('now') WHERE id = ?`
   ).bind(
     body.value ?? null, body.min_amount ?? null, body.max_uses ?? null,
-    body.valid_from || null, body.valid_until || null, body.status || null, id
+    body.valid_from ?? null, body.valid_until ?? null, body.status ?? null, id
   ).run()
 
   await logAdminAction(c, 'coupon.update', 'coupon', id, { code: coupon.code })
@@ -785,26 +785,26 @@ router.get('/analytics', requirePermission('analytics:read'), async (c) => {
 router.get('/analytics/revenue', requirePermission('analytics:read'), async (c) => {
   const db = c.env.DB
   const { date_start, date_end } = c.req.query()
-  const start = date_start || "datetime('now', '-30 days')"
-  const end = date_end || "datetime('now')"
+  const startParam = date_start || new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
+  const endParam = date_end || new Date().toISOString().slice(0, 10)
 
   const byDay = await db.prepare(
     `SELECT date(paid_at) as date, COUNT(*) as orders, SUM(amount) as revenue
-     FROM orders WHERE status = 'paid' AND paid_at >= ${start} AND paid_at <= ${end}
+     FROM orders WHERE status = 'paid' AND date(paid_at) >= ? AND date(paid_at) <= ?
      GROUP BY date(paid_at) ORDER BY date ASC`
-  ).all()
+  ).bind(startParam, endParam).all()
 
   const byPlan = await db.prepare(
     `SELECT p.name as plan_name, COUNT(*) as orders, SUM(o.amount) as revenue
      FROM orders o LEFT JOIN plans p ON o.plan_id = p.id
-     WHERE o.status = 'paid' AND o.paid_at >= ${start} AND o.paid_at <= ${end}
+     WHERE o.status = 'paid' AND date(o.paid_at) >= ? AND date(o.paid_at) <= ?
      GROUP BY o.plan_id ORDER BY revenue DESC`
-  ).all()
+  ).bind(startParam, endParam).all()
 
   const totalRevenue = await db.prepare(
     `SELECT COUNT(*) as total_orders, COALESCE(SUM(amount),0) as total_revenue
-     FROM orders WHERE status = 'paid' AND paid_at >= ${start} AND paid_at <= ${end}`
-  ).first()
+     FROM orders WHERE status = 'paid' AND date(paid_at) >= ? AND date(paid_at) <= ?`
+  ).bind(startParam, endParam).first()
 
   return c.json({
     data: {
@@ -1058,7 +1058,7 @@ router.put('/invoices/:id', requirePermission('invoice:update'), async (c) => {
 
   await db.prepare(
     "UPDATE invoices SET status = COALESCE(?, status), invoice_no = COALESCE(?, invoice_no), remark = COALESCE(?, remark), updated_at = datetime('now') WHERE id = ?"
-  ).bind(body.status || null, body.invoice_no || null, body.remark || null, id).run()
+  ).bind(body.status ?? null, body.invoice_no ?? null, body.remark ?? null, id).run()
 
   await logAdminAction(c, 'invoice.update', 'invoice', id, { before_status: invoice.status, after_status: body.status || invoice.status })
   return c.json({ message: '发票已更新' })
@@ -1281,7 +1281,7 @@ router.put('/notices/:id', requirePermission('notice:update'), async (c) => {
 
   await db.prepare(
     "UPDATE notices SET title = COALESCE(?, title), content = COALESCE(?, content), type = COALESCE(?, type), status = COALESCE(?, status), sort_order = COALESCE(?, sort_order), updated_at = datetime('now') WHERE id = ?"
-  ).bind(title || null, content || null, type || null, status || null, sort_order ?? null, id).run()
+  ).bind(title ?? null, content ?? null, type ?? null, status ?? null, sort_order ?? null, id).run()
 
   await logAdminAction(c, 'notice.update', 'notice', id, { before: { title: notice.title }, after: { title: title || notice.title } })
   return c.json({ message: '公告已更新' })
@@ -1305,7 +1305,7 @@ router.put('/notify-templates/:id', requirePermission('notify:update'), async (c
 
   await db.prepare(
     "UPDATE notify_templates SET subject = COALESCE(?, subject), content = COALESCE(?, content), updated_at = datetime('now') WHERE id = ?"
-  ).bind(body.subject || null, body.content || null, id).run()
+  ).bind(body.subject ?? null, body.content ?? null, id).run()
 
   await logAdminAction(c, 'notify_template.update', 'notify_template', id, { changes: Object.keys(body) })
   return c.json({ message: '模板已更新' })
@@ -1386,7 +1386,7 @@ router.put('/channels/:id', requirePermission('channel:update'), async (c) => {
 
   await db.prepare(
     "UPDATE channels SET name = COALESCE(?, name), commission_rate = COALESCE(?, commission_rate), status = COALESCE(?, status), note = COALESCE(?, note), updated_at = datetime('now') WHERE id = ?"
-  ).bind(name || null, commission_rate ?? null, status || null, note || null, id).run()
+  ).bind(name ?? null, commission_rate ?? null, status ?? null, note ?? null, id).run()
 
   await logAdminAction(c, 'channel.update', 'channel', id, { changes: Object.keys({ name, commission_rate, status, note }) })
   return c.json({ message: '渠道已更新' })
