@@ -2,7 +2,7 @@
  * API 请求模块
  * Cloudflare Workers 兼容版本
  */
-const BASE_URL = '/api'
+const BASE_URL = import.meta.env.DEV ? '/api' : 'https://www.lequ.pw/api'
 
 async function request(url, options = {}) {
   const token = localStorage.getItem('shouquan_token')
@@ -32,5 +32,11 @@ export default {
   },
   post(url, body) {
     return request(url, { method: 'POST', body: JSON.stringify(body) })
+  },
+  put(url, body) {
+    return request(url, { method: 'PUT', body: JSON.stringify(body) })
+  },
+  delete(url) {
+    return request(url, { method: 'DELETE' })
   },
 }

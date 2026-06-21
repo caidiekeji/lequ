@@ -1,661 +1,546 @@
 /**
- * 官网 HTML 页面
- * 设计主题：tech_gradient（暗色科技蓝）
- * 布局类型：saas / hero_single_scroll
- * 动画级别：rich（滚动淡入、数字滚动、悬停发光）
- * 兼容 Cloudflare Workers 环境（纯 JS 模板，零外部依赖）
+ * ShouYinPOS 官网页面
+ * Design: Premium B2B — Plus Jakarta Sans, desaturated palette, tinted shadows, asymmetric layouts
  */
 
-// ==================== 设计令牌 ====================
+// ==================== Design Tokens ====================
 const TOKENS = {
-  '--bg-primary': '#0B0F19',
-  '--bg-secondary': '#111827',
-  '--bg-card': '#1A2332',
-  '--bg-card-hover': '#1E2A3D',
-  '--bg-section': '#0F1522',
-  '--text-primary': '#F1F5F9',
-  '--text-secondary': '#94A3B8',
-  '--text-muted': '#64748B',
-  '--accent': '#3B82F6',
-  '--accent-hover': '#60A5FA',
-  '--accent-glow': 'rgba(59,130,246,0.25)',
-  '--accent-secondary': '#06B6D4',
-  '--border': '#1E293B',
+  '--bg': '#f5f6f8',
+  '--bg-alt': '#eceef2',
+  '--bg-card': '#ffffff',
+  '--text': '#1b1f2b',
+  '--text-2': '#555b6e',
+  '--text-3': '#8b92a5',
+  '--accent': '#4361a8',
+  '--accent-hover': '#334d8a',
+  '--accent-light': '#edf1fa',
+  '--accent-emerald': '#2d8a5e',
+  '--border': '#dde1e8',
+  '--border-subtle': '#eceef2',
+  '--radius': '10px',
   '--radius-sm': '6px',
-  '--radius-md': '12px',
-  '--radius-lg': '20px',
-  '--shadow-sm': '0 1px 3px rgba(0,0,0,0.3)',
-  '--shadow-md': '0 4px 20px rgba(0,0,0,0.4)',
-  '--shadow-lg': '0 8px 40px rgba(0,0,0,0.5)',
-  '--shadow-glow': '0 0 30px rgba(59,130,246,0.15)',
-  '--transition': '0.3s cubic-bezier(0.4,0,0.2,1)',
-  '--font-sans': "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'Noto Sans SC','PingFang SC',sans-serif",
-  '--font-mono': "'JetBrains Mono','Fira Code',monospace",
+  '--radius-lg': '16px',
+  '--radius-xl': '24px',
+  '--shadow-sm': '0 1px 3px rgba(67,97,168,0.06)',
+  '--shadow-md': '0 4px 20px rgba(67,97,168,0.08)',
+  '--shadow-lg': '0 16px 48px rgba(67,97,168,0.12)',
+  '--transition': 'all 0.2s cubic-bezier(0.4,0,0.2,1)',
+  '--font': '"Plus Jakarta Sans",system-ui,sans-serif',
 }
 
-// ==================== CSS 构建器 ====================
 function buildCSS() {
   const vars = Object.entries(TOKENS).map(([k, v]) => `${k}:${v}`).join(';')
-  return `:root{${vars}}
+  return `@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+:root{${vars}}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{font-family:var(--font-sans);background:var(--bg-primary);color:var(--text-primary);line-height:1.7;-webkit-font-smoothing:antialiased}
-a{color:var(--accent);text-decoration:none;transition:color var(--transition)}
-a:hover{color:var(--accent-hover)}
-img{max-width:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;font-feature-settings:'cv11','ss01'}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
 
-/* Container */
-.container{max-width:1120px;margin:0 auto;padding:0 24px;width:100%}
+.skip-link{position:absolute;top:-100%;left:16px;z-index:9999;padding:10px 20px;background:var(--accent);color:#fff;border-radius:var(--radius-sm);font-size:14px;font-weight:600;transition:top 0.2s}
+.skip-link:focus{top:16px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* ===== Navigation ===== */
-nav{background:rgba(11,15,25,0.85);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);border-bottom:1px solid rgba(30,41,59,0.6);position:sticky;top:0;z-index:1000;height:68px}
-nav .container{display:flex;align-items:center;justify-content:space-between;height:100%}
-nav .logo{display:flex;align-items:center;gap:8px;font-size:22px;font-weight:800;color:var(--text-primary);letter-spacing:-0.5px}
-nav .logo svg{width:32px;height:32px}
-nav .logo span{color:var(--accent);background:linear-gradient(135deg,var(--accent),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.nav-links{display:flex;gap:32px;align-items:center}
-.nav-links a{color:var(--text-secondary);font-size:14px;font-weight:500;position:relative;padding:4px 0}
-.nav-links a::after{content:'';position:absolute;bottom:-2px;left:0;width:0;height:2px;background:var(--accent);transition:width var(--transition);border-radius:2px}
-.nav-links a:hover::after,.nav-links a.active::after{width:100%}
-.nav-links a:hover{color:var(--text-primary)}
-.nav-links a.active{color:var(--accent);font-weight:600}
-.nav-links .btn-nav{background:linear-gradient(135deg,var(--accent),#2563EB);color:#fff;padding:10px 24px;border-radius:var(--radius-md);font-weight:600;font-size:14px;border:1px solid rgba(59,130,246,0.3);transition:all var(--transition)}
-.nav-links .btn-nav:hover{box-shadow:var(--shadow-glow);transform:translateY(-1px);color:#fff}
-.nav-links .btn-nav::after{display:none}
-.nav-toggle{display:none;cursor:pointer;width:28px;height:20px;position:relative;z-index:1001}
-.nav-toggle span{display:block;width:100%;height:2px;background:var(--text-primary);position:absolute;transition:all var(--transition);border-radius:2px}
-.nav-toggle span:nth-child(1){top:0}
-.nav-toggle span:nth-child(2){top:9px}
-.nav-toggle span:nth-child(3){top:18px}
-.nav-toggle.open span:nth-child(1){transform:translateY(9px)rotate(45deg)}
-.nav-toggle.open span:nth-child(2){opacity:0}
-.nav-toggle.open span:nth-child(3){transform:translateY(-9px)rotate(-45deg)}
+.wrap{max-width:1200px;margin:0 auto;padding:0 24px}
 
-/* ===== Hero ===== */
-.hero{position:relative;padding:120px 0 100px;text-align:center;overflow:hidden;background:var(--bg-primary)}
-.hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse 600px 400px at 50% 30%,rgba(59,130,246,0.08),transparent),radial-gradient(ellipse 400px 300px at 70% 60%,rgba(6,182,212,0.06),transparent);pointer-events:none;animation:heroPulse 8s ease-in-out infinite alternate}
-@keyframes heroPulse{0%{transform:scale(1)rotate(0deg)}100%{transform:scale(1.05)rotate(2deg)}}
-.hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(59,130,246,0.03)1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.03)1px,transparent 1px);background-size:60px 60px;pointer-events:none;mask-image:radial-gradient(ellipse 60% 50% at 50% 30%,black,transparent 70%);-webkit-mask-image:radial-gradient(ellipse 60% 50% at 50% 30%,black,transparent 70%)}
-.hero .container{position:relative;z-index:1}
-.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.2);border-radius:20px;padding:6px 16px;font-size:13px;color:var(--accent);margin-bottom:28px}
-.hero-badge .dot{width:6px;height:6px;background:#22C55E;border-radius:50%;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-.hero h1{font-size:clamp(36px,5vw,60px);font-weight:800;line-height:1.15;margin-bottom:20px;letter-spacing:-1px}
-.hero h1 .gradient{background:linear-gradient(135deg,var(--accent),var(--accent-secondary),var(--accent));background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:gradientShift 4s ease-in-out infinite}
-@keyframes gradientShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-.hero p{font-size:clamp(16px,1.3vw,19px);color:var(--text-secondary);max-width:600px;margin:0 auto 36px;line-height:1.7}
-.hero .btns{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
-.hero .btns .primary{background:linear-gradient(135deg,var(--accent),#2563EB);color:#fff;padding:14px 36px;border-radius:var(--radius-md);font-weight:700;font-size:16px;display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(59,130,246,0.3);transition:all var(--transition);box-shadow:0 4px 14px rgba(59,130,246,0.25)}
-.hero .btns .primary:hover{box-shadow:0 6px 24px rgba(59,130,246,0.35);transform:translateY(-2px)}
-.hero .btns .secondary{background:rgba(255,255,255,0.05);color:var(--text-primary);padding:14px 36px;border-radius:var(--radius-md);font-weight:600;font-size:16px;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);transition:all var(--transition)}
-.hero .btns .secondary:hover{border-color:var(--accent);color:var(--accent);background:rgba(59,130,246,0.08)}
-.hero-stats{display:flex;justify-content:center;gap:48px;margin-top:60px;flex-wrap:wrap}
-.hero-stat{text-align:center}
-.hero-stat .num{font-size:36px;font-weight:800;background:linear-gradient(135deg,var(--text-primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero-stat .label{font-size:13px;color:var(--text-muted);margin-top:4px}
+/* ==================== Navigation ==================== */
+.nav{position:sticky;top:0;z-index:100;background:rgba(245,246,248,0.88);backdrop-filter:blur(16px) saturate(1.2);border-bottom:1px solid var(--border)}
+.nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.3px}
+.logo svg{width:28px;height:28px}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--text-2);font-size:14px;font-weight:500;transition:color 0.2s}
+.nav-links a:hover{color:var(--text)}
+.nav-links a.on{color:var(--accent);font-weight:600}
+.nav-btn{background:var(--accent);color:#fff!important;padding:8px 20px;border-radius:var(--radius-sm);font-weight:600;font-size:13px;transition:var(--transition)}
+.nav-btn:hover{background:var(--accent-hover);transform:translateY(-1px)}
+.nav-btn:active{transform:scale(0.97)}
+.nav-mob{display:none;cursor:pointer;width:24px;height:18px;position:relative}
+.nav-mob span{display:block;width:100%;height:2px;background:var(--text);position:absolute;transition:0.25s;border-radius:1px}
+.nav-mob span:nth-child(1){top:0}
+.nav-mob span:nth-child(2){top:8px}
+.nav-mob span:nth-child(3){top:16px}
+.nav-mob.open span:nth-child(1){transform:translateY(8px)rotate(45deg)}
+.nav-mob.open span:nth-child(2){opacity:0}
+.nav-mob.open span:nth-child(3){transform:translateY(-8px)rotate(-45deg)}
 
-/* ===== Fade In Scroll ===== */
-.fade-up{opacity:0;transform:translateY(30px);transition:opacity 0.6s ease,transform 0.6s ease}
-.fade-up.visible{opacity:1;transform:translateY(0)}
-.stagger-1{transition-delay:0.1s!important}
-.stagger-2{transition-delay:0.2s!important}
-.stagger-3{transition-delay:0.3s!important}
-.stagger-4{transition-delay:0.4s!important}
+/* ==================== Hero ==================== */
+.hero{position:relative;min-height:85dvh;display:flex;align-items:center;overflow:hidden;background:linear-gradient(135deg,#f0f2f5 0%,#e8ecf2 100%)}
+.hero .wrap{position:relative;z-index:2;width:100%;max-width:1200px;margin:0 auto;padding:80px 24px;display:grid;grid-template-columns:0.45fr 0.55fr;gap:48px;align-items:center}
+.hero-carousel{position:relative;z-index:1}
+.hero-carousel .carousel{border-radius:var(--radius-xl);overflow:hidden;box-shadow:0 24px 64px rgba(67,97,168,0.15),0 8px 24px rgba(67,97,168,0.08);border:1px solid rgba(255,255,255,0.8)}
+.hero-carousel .carousel-slide{width:100%;aspect-ratio:2879/1565}
+.hero-carousel .carousel-slide img{width:100%;height:100%;object-fit:contain;display:block;background:#fff}
+.hero-content{position:relative;z-index:2}
+.hero h1{font-size:clamp(36px,4.5vw,54px);font-weight:800;line-height:1.05;letter-spacing:-2.5px;margin-bottom:20px;color:var(--text);text-wrap:balance}
+.hero p{font-size:17px;color:var(--text-2);line-height:1.75;margin-bottom:36px;max-width:420px}
+.hero-btns{display:flex;gap:14px;flex-wrap:wrap}
 
-/* ===== Sections ===== */
-section{padding:100px 0}
-.section-dark{background:var(--bg-secondary)}
-.section-alt{background:var(--bg-section)}
-.section-title{font-size:clamp(26px,2.8vw,36px);font-weight:800;text-align:center;margin-bottom:12px;letter-spacing:-0.5px}
-.section-title .highlight{background:linear-gradient(135deg,var(--accent),var(--accent-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.section-subtitle{text-align:center;color:var(--text-secondary);font-size:16px;margin-bottom:56px;max-width:600px;margin-left:auto;margin-right:auto;line-height:1.7}
+/* ==================== Buttons ==================== */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:13px 30px;border-radius:var(--radius-sm);font-weight:600;font-size:14px;transition:var(--transition);border:none;cursor:pointer;font-family:var(--font);white-space:nowrap}
+.btn:active{transform:scale(0.97)!important}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(67,97,168,0.2)}
+.btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px);box-shadow:0 4px 16px rgba(67,97,168,0.25)}
+.btn-outline{background:transparent;color:var(--text);border:1.5px solid var(--border)}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light)}
+.btn-ghost{background:transparent;color:var(--accent);padding:8px 0}
+.btn-ghost:hover{color:var(--accent-hover)}
+.btn-full{width:100%;justify-content:center}
 
-/* ===== Features ===== */
-.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-.feature-card{background:var(--bg-card);border-radius:var(--radius-md);padding:32px;border:1px solid var(--border);transition:all var(--transition);position:relative;overflow:hidden}
-.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--accent),transparent);opacity:0;transition:opacity var(--transition)}
-.feature-card:hover{background:var(--bg-card-hover);transform:translateY(-4px);border-color:rgba(59,130,246,0.2);box-shadow:var(--shadow-glow)}
-.feature-card:hover::before{opacity:1}
-.feature-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:20px;position:relative}
-.feature-icon.glow-blue{background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.15)}
-.feature-icon.glow-cyan{background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.15)}
-.feature-icon.glow-green{background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.15)}
-.feature-icon.glow-purple{background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.15)}
-.feature-icon.glow-amber{background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.15)}
-.feature-icon.glow-pink{background:rgba(236,72,153,0.12);border:1px solid rgba(236,72,153,0.15)}
-.feature-card h3{font-size:18px;font-weight:700;margin-bottom:10px}
-.feature-card p{font-size:14px;color:var(--text-secondary);line-height:1.7}
+/* ==================== Carousel ==================== */
+.carousel{position:relative;border-radius:var(--radius-xl);overflow:hidden;box-shadow:0 24px 64px rgba(67,97,168,0.15),0 8px 24px rgba(67,97,168,0.08);border:1px solid rgba(255,255,255,0.8)}
+.carousel-track{position:relative;width:100%}
+.carousel-slide{width:100%;aspect-ratio:2879/1565;display:none}
+.carousel-slide.active{display:block}
+.carousel-slide img{width:100%;height:100%;object-fit:contain;display:block;background:#fff}
+.carousel-nav{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:10px;z-index:10}
+.carousel-dot{width:8px;height:8px;border-radius:100px;background:rgba(0,0,0,0.2);cursor:pointer;transition:all 0.3s;border:none;padding:0}
+.carousel-dot.active{background:var(--text);width:28px}
+.carousel-btn{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.92);border:none;color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:var(--transition);z-index:10;box-shadow:0 4px 16px rgba(0,0,0,0.1)}
+.carousel-btn:hover{background:#fff;box-shadow:0 6px 24px rgba(0,0,0,0.15);transform:translateY(-50%) scale(1.08)}
+.carousel-btn:active{transform:translateY(-50%) scale(0.95)}
+.carousel-btn.prev{left:16px}
+.carousel-btn.next{right:16px}
 
-/* ===== Stats Counter ===== */
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
-.stat-card{background:var(--bg-card);border-radius:var(--radius-md);padding:36px 24px;text-align:center;border:1px solid var(--border);transition:all var(--transition)}
-.stat-card:hover{box-shadow:var(--shadow-glow);border-color:rgba(59,130,246,0.2)}
-.stat-card .num{font-size:clamp(32px,3vw,44px);font-weight:800;background:linear-gradient(135deg,var(--text-primary),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
-.stat-card .label{font-size:14px;color:var(--text-muted)}
-.stat-card .suffix{font-size:20px;color:var(--accent);-webkit-text-fill-color:var(--accent)}
+/* ==================== Section Header ==================== */
+.section-header{margin-bottom:56px}
+.section-header h2{font-size:clamp(28px,3.5vw,40px);font-weight:800;letter-spacing:-1.2px;color:var(--text);margin-bottom:12px;text-wrap:balance}
+.section-header p{color:var(--text-2);font-size:16px;max-width:480px;line-height:1.7}
+.section-header.center{text-align:center}
+.section-header.center p{margin:0 auto}
 
-/* ===== Pricing ===== */
-.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px;align-items:start}
-.pricing-card{background:var(--bg-card);border-radius:var(--radius-md);padding:36px 28px;border:1px solid var(--border);transition:all var(--transition);position:relative}
-.pricing-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-glow)}
-.pricing-card.featured{border-color:var(--accent);background:linear-gradient(135deg,var(--bg-card),rgba(59,130,246,0.06));box-shadow:0 0 40px rgba(59,130,246,0.08)}
-.pricing-card.featured::before{content:'推荐';position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--accent),#2563EB);color:#fff;padding:4px 18px;border-radius:12px;font-size:12px;font-weight:700;letter-spacing:0.5px;box-shadow:0 2px 8px rgba(59,130,246,0.3)}
-.pricing-card .plan-name{font-size:15px;font-weight:600;color:var(--text-muted);margin-bottom:4px}
-.pricing-card .price{font-size:42px;font-weight:800;margin:12px 0 4px;letter-spacing:-1px}
-.pricing-card .price .currency{font-size:20px;vertical-align:super}
-.pricing-card .price .period{font-size:14px;color:var(--text-muted);font-weight:400}
-.pricing-card .price-desc{font-size:13px;color:var(--text-muted);margin-bottom:20px}
-.pricing-card ul{list-style:none;padding:0;margin:20px 0 28px}
-.pricing-card ul li{padding:10px 0;font-size:14px;color:var(--text-secondary);border-bottom:1px solid rgba(30,41,59,0.5);display:flex;align-items:center;gap:10px}
-.pricing-card ul li:last-child{border-bottom:none}
-.pricing-card ul li .check{color:#22C55E;font-weight:700}
-.pricing-card .btn{display:block;text-align:center;padding:12px;border-radius:var(--radius-md);font-weight:600;font-size:15px;transition:all var(--transition)}
-.pricing-card .btn-outline{background:rgba(255,255,255,0.04);border:1px solid var(--border);color:var(--text-primary)}
-.pricing-card .btn-outline:hover{background:rgba(59,130,246,0.1);border-color:var(--accent);color:var(--accent)}
-.pricing-card.featured .btn-primary{background:linear-gradient(135deg,var(--accent),#2563EB);color:#fff;border:1px solid rgba(59,130,246,0.3);box-shadow:0 4px 14px rgba(59,130,246,0.25)}
-.pricing-card.featured .btn-primary:hover{box-shadow:0 6px 24px rgba(59,130,246,0.35);transform:translateY(-1px)}
+/* ==================== Features ==================== */
+.features{padding:120px 0}
+.feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.feature-card{background:var(--bg-card);border-radius:var(--radius-lg);padding:36px;transition:var(--transition);border:1px solid transparent}
+.feature-card:hover{border-color:var(--border);box-shadow:var(--shadow-md);transform:translateY(-2px)}
+.feature-card.featured{grid-column:span 2;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;padding:48px}
+.feature-icon{width:48px;height:48px;border-radius:var(--radius);background:var(--accent-light);display:flex;align-items:center;justify-content:center;margin-bottom:20px}
+.feature-icon svg{width:24px;height:24px;color:var(--accent)}
+.feature-card h3{font-size:18px;font-weight:700;margin-bottom:8px;letter-spacing:-0.3px}
+.feature-card p{font-size:14px;color:var(--text-2);line-height:1.75}
 
-/* ===== CTA ===== */
-.cta-section{position:relative;overflow:hidden;padding:100px 0;text-align:center}
-.cta-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 800px 400px at 50% 50%,rgba(59,130,246,0.1),transparent);pointer-events:none}
-.cta-section .container{position:relative;z-index:1}
-.cta-section h2{font-size:clamp(28px,3vw,40px);font-weight:800;margin-bottom:14px}
-.cta-section p{color:var(--text-secondary);font-size:16px;margin-bottom:32px;max-width:500px;margin-left:auto;margin-right:auto}
-.cta-section .btn-cta{background:linear-gradient(135deg,var(--accent),#2563EB);color:#fff;padding:16px 44px;border-radius:var(--radius-md);font-weight:700;font-size:17px;display:inline-flex;align-items:center;gap:10px;border:1px solid rgba(59,130,246,0.3);box-shadow:0 4px 20px rgba(59,130,246,0.25);transition:all var(--transition)}
-.cta-section .btn-cta:hover{box-shadow:0 8px 32px rgba(59,130,246,0.35);transform:translateY(-2px)}
+/* ==================== Stats ==================== */
+.stats{padding:100px 0;background:var(--bg-alt)}
+.stats .wrap{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center}
+.stats-head .big{font-size:clamp(52px,7vw,80px);font-weight:800;letter-spacing:-4px;line-height:1;color:var(--text);font-variant-numeric:tabular-nums}
+.stats-head .big span{color:var(--accent)}
+.stats-head .sub{font-size:16px;color:var(--text-2);margin-top:12px;line-height:1.6}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.stat-card{background:var(--bg-card);border-radius:var(--radius);padding:28px;border:1px solid var(--border);transition:var(--transition)}
+.stat-card:hover{box-shadow:var(--shadow-sm);border-color:transparent}
+.stat-card .num{font-size:32px;font-weight:800;letter-spacing:-1.5px;font-variant-numeric:tabular-nums;color:var(--text)}
+.stat-card .num em{font-style:normal;color:var(--accent)}
+.stat-card .lbl{font-size:13px;color:var(--text-3);margin-top:6px}
 
-/* ===== Footer ===== */
-footer{background:var(--bg-secondary);border-top:1px solid var(--border);padding:60px 0 32px}
-footer .grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px}
-footer .brand-desc{font-size:14px;color:var(--text-muted);line-height:1.8;margin-top:12px;max-width:300px}
-footer h4{color:var(--text-primary);font-size:15px;font-weight:700;margin-bottom:18px;letter-spacing:-0.3px}
-footer a{display:block;font-size:14px;color:var(--text-muted);padding:5px 0;transition:color var(--transition)}
-footer a:hover{color:var(--accent)}
-footer .social{display:flex;gap:12px;margin-top:16px}
-footer .social a{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;padding:0;transition:all var(--transition)}
-footer .social a:hover{background:rgba(59,130,246,0.1);border-color:var(--accent);color:var(--accent)}
-footer .bottom{border-top:1px solid var(--border);margin-top:40px;padding-top:24px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
-footer .bottom span{font-size:13px;color:var(--text-muted)}
+/* ==================== Pricing ==================== */
+.pricing{padding:120px 0}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1020px;margin:0 auto;align-items:start}
+.price-card{background:var(--bg-card);border-radius:var(--radius-lg);padding:40px 32px;text-align:center;transition:var(--transition);border:1.5px solid var(--border)}
+.price-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.price-card.pop{border-color:var(--accent);position:relative;transform:scale(1.05);z-index:2;box-shadow:var(--shadow-lg)}
+.price-card.pop::before{content:'';position:absolute;top:-1px;left:0;right:0;height:3px;background:var(--accent);border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+.price-card.pop:hover{transform:scale(1.05) translateY(-4px)}
+.price-card .name{font-size:13px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:16px}
+.price-card .price{font-size:48px;font-weight:800;letter-spacing:-2.5px;color:var(--text);font-variant-numeric:tabular-nums}
+.price-card .price span{font-size:14px;color:var(--text-3);font-weight:400;letter-spacing:0}
+.price-card .desc{font-size:14px;color:var(--text-2);margin:8px 0 28px}
+.price-card ul{list-style:none;text-align:left;margin-bottom:32px}
+.price-card li{padding:10px 0;font-size:14px;color:var(--text-2);border-bottom:1px solid var(--border-subtle);display:flex;align-items:center;gap:10px}
+.price-card li:last-child{border-bottom:none}
+.price-card .ck{color:var(--accent-emerald);font-weight:700;font-size:13px;flex-shrink:0}
+.price-card .btn{width:100%;justify-content:center}
+.price-card.pop .btn{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(67,97,168,0.2)}
+.price-card.pop .btn:hover{background:var(--accent-hover)}
 
-/* ===== Docs ===== */
-.docs-page{padding:60px 0;max-width:860px;margin:0 auto}
-.docs-page h1{font-size:clamp(28px,3vw,38px);font-weight:800;margin-bottom:8px;letter-spacing:-0.5px}
-.docs-page .lead{color:var(--text-secondary);font-size:16px;margin-bottom:48px}
-.docs-page h2{font-size:22px;font-weight:700;margin:40px 0 16px;padding-bottom:10px;border-bottom:1px solid var(--border);color:var(--text-primary)}
-.docs-page h3{font-size:17px;font-weight:600;margin:28px 0 10px;color:var(--accent)}
-.docs-page p{color:var(--text-secondary);margin-bottom:14px;line-height:1.8;font-size:15px}
-.docs-page code{background:rgba(59,130,246,0.08);padding:2px 8px;border-radius:4px;font-size:13px;font-family:var(--font-mono);color:var(--accent)}
-.docs-page pre{background:var(--bg-card);color:var(--text-primary);padding:20px 24px;border-radius:var(--radius-md);overflow-x:auto;margin-bottom:20px;font-size:13px;line-height:1.6;font-family:var(--font-mono);border:1px solid var(--border)}
-.docs-page .endpoint{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 16px;background:rgba(59,130,246,0.04);border-radius:var(--radius-sm);border:1px solid var(--border)}
-.docs-page .method{background:var(--accent);color:#fff;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase}
-.docs-page .method.get{background:#22C55E}
-.docs-page .method.post{background:var(--accent)}
-.docs-page .method.del{background:#EF4444}
-.docs-page .tip-box{background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.15);border-radius:var(--radius-md);padding:20px 24px;margin:32px 0}
-.docs-page .tip-box strong{color:var(--accent)}
+/* ==================== CTA ==================== */
+.cta{padding:120px 0;text-align:center;background:linear-gradient(135deg,var(--accent-light) 0%,#f0f2f5 100%);position:relative;overflow:hidden}
+.cta::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%234361a8' fill-opacity='0.03'%3E%3Cpath d='M0 40L40 0H20L0 20M40 40V20L20 40'/%3E%3C/g%3E%3C/svg%3E")}
+.cta h2{font-size:clamp(28px,3.5vw,40px);font-weight:800;margin-bottom:16px;letter-spacing:-1.2px;position:relative;text-wrap:balance}
+.cta p{color:var(--text-2);font-size:16px;margin-bottom:36px;position:relative}
+.cta .btn{position:relative}
 
-/* ===== Page Hero ===== */
-.page-hero{padding:80px 0 60px;text-align:center;background:var(--bg-primary);border-bottom:1px solid var(--border)}
-.page-hero h1{font-size:clamp(28px,3vw,40px);font-weight:800;margin-bottom:8px}
-.page-hero p{color:var(--text-secondary);font-size:16px}
+/* ==================== Footer ==================== */
+.footer{border-top:1px solid var(--border);padding:56px 0 24px;background:var(--bg)}
+.footer .wrap{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px}
+.footer h4{font-size:12px;font-weight:700;margin-bottom:14px;color:var(--text);text-transform:uppercase;letter-spacing:0.06em}
+.footer a{display:block;font-size:13px;color:var(--text-2);padding:4px 0;transition:color 0.2s}
+.footer a:hover{color:var(--accent)}
+.footer .copy{border-top:1px solid var(--border);margin-top:36px;padding-top:16px;display:flex;justify-content:space-between;font-size:12px;color:var(--text-3)}
 
-/* ===== Feature detail list ===== */
-.feature-detail-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
-@media(max-width:768px){.feature-detail-grid{grid-template-columns:1fr}}
+/* ==================== Auth ==================== */
+.auth{min-height:100dvh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:24px}
+.auth-box{background:var(--bg-card);border-radius:var(--radius-xl);padding:44px;width:100%;max-width:420px;box-shadow:var(--shadow-lg);border:1px solid var(--border)}
+.auth-box h1{font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:-0.5px}
+.auth-box .sub{color:var(--text-2);font-size:14px;margin-bottom:28px}
+.fg{margin-bottom:18px}
+.fg label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text)}
+.fg input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:14px;font-family:var(--font);outline:none;transition:var(--transition);background:var(--bg-card)}
+.fg input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
+.fg .hint{font-size:12px;color:var(--text-3);margin-top:4px}
+.err{color:#c9302c;font-size:13px;margin-bottom:12px;font-weight:500}
+.auth-foot{margin-top:20px;display:flex;justify-content:space-between;font-size:13px;color:var(--text-3)}
+.auth-foot a{color:var(--accent);font-weight:500}
 
-/* ===== Responsive ===== */
+/* ==================== User Pages ==================== */
+.user{min-height:calc(100dvh - 64px);display:flex;background:var(--bg)}
+.user-wrap{max-width:1200px;width:100%;display:flex;margin:0 auto}
+.user-side{width:240px;border-right:1px solid var(--border);background:var(--bg-card);padding:24px 0;flex-shrink:0}
+.user-side h3{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;padding:0 20px;margin-bottom:8px}
+.user-side a{display:flex;align-items:center;gap:10px;padding:8px 20px;font-size:13px;color:var(--text-2);transition:var(--transition);border-left:2px solid transparent;margin:0 12px;border-radius:0 var(--radius-sm) var(--radius-sm) 0;font-weight:500}
+.user-side a:hover{color:var(--text);background:var(--bg-alt)}
+.user-side a.on{color:var(--accent);border-left-color:var(--accent);background:var(--accent-light);font-weight:600}
+.user-side a svg{width:16px;height:16px;opacity:0.5}
+.user-side a.on svg{opacity:1}
+.user-side .div{height:1px;background:var(--border);margin:12px 20px}
+.user-main{flex:1;padding:32px;min-width:0}
+.user-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px}
+.user-head h1{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+.user-head .sub{color:var(--text-2);font-size:14px;margin-top:4px}
+.user-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.user-stat{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:var(--transition)}
+.user-stat:hover{box-shadow:var(--shadow-sm);border-color:transparent}
+.user-stat .icon{width:36px;height:36px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.user-stat .icon svg{width:18px;height:18px}
+.user-stat .icon.blue{background:var(--accent-light);color:var(--accent)}
+.user-stat .icon.green{background:rgba(45,138,94,0.1);color:var(--accent-emerald)}
+.user-stat .icon.amber{background:rgba(196,125,26,0.1);color:#c47d1a}
+.user-stat .icon.purple{background:rgba(120,90,200,0.1);color:#785ac8}
+.user-stat .val{font-size:24px;font-weight:800;color:var(--text);letter-spacing:-0.5px;font-variant-numeric:tabular-nums}
+.user-stat .lbl{font-size:12px;color:var(--text-2);margin-top:4px}
+.sec{margin-bottom:28px}
+.sec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sec-head h2{font-size:15px;font-weight:700}
+.sec-head a{font-size:13px;color:var(--accent);font-weight:500}
+.list{display:flex;flex-direction:column;gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.item{display:flex;justify-content:space-between;align-items:center;background:var(--bg-card);padding:14px 16px;transition:background 0.15s;cursor:pointer}
+.item:hover{background:var(--bg-alt)}
+.item-t{font-weight:600;font-size:14px}
+.item-m{font-size:12px;color:var(--text-3);margin-top:2px}
+.item-r{text-align:right}
+.badge{font-size:11px;padding:3px 10px;border-radius:100px;font-weight:600}
+.badge-ok{background:rgba(45,138,94,0.1);color:var(--accent-emerald)}
+.badge-no{background:rgba(201,48,44,0.1);color:#c9302c}
+.badge-wait{background:rgba(196,125,26,0.1);color:#c47d1a}
+.empty{text-align:center;padding:40px;color:var(--text-3);background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius)}
+.empty a{color:var(--accent);font-weight:500}
+.tabs{display:flex;gap:4px;margin-bottom:16px;background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius-sm);padding:3px;width:fit-content}
+.tabs button{padding:6px 16px;border:none;border-radius:5px;font-size:13px;cursor:pointer;color:var(--text-2);background:transparent;transition:var(--transition);font-family:var(--font);font-weight:500}
+.tabs button.on{background:var(--bg-card);color:var(--text);box-shadow:var(--shadow-sm);font-weight:600}
+.tabs button:hover:not(.on){color:var(--text)}
+.license-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.lic{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;transition:var(--transition);cursor:pointer}
+.lic:hover{border-color:var(--accent);box-shadow:var(--shadow-sm)}
+.lic-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.lic-name{font-weight:700;font-size:15px}
+.lic-key{font-family:"SF Mono",ui-monospace,monospace;font-size:12px;background:var(--bg-alt);padding:8px 12px;border-radius:6px;border:1px solid var(--border);margin-bottom:12px;color:var(--text-2);letter-spacing:0.02em}
+.lic-foot{display:flex;justify-content:space-between;font-size:12px;color:var(--text-3)}
+.quick-actions{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px}
+.quick-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);text-decoration:none;color:var(--text);transition:var(--transition)}
+.quick-btn:hover{border-color:var(--accent);box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+.quick-btn:active{transform:scale(0.98)}
+.quick-btn svg{width:24px;height:24px;color:var(--accent)}
+.quick-btn span{font-size:13px;font-weight:600}
+
+/* ==================== Docs ==================== */
+.docs{padding:80px 0}
+.docs .wrap{max-width:760px}
+.docs h1{font-size:clamp(24px,3vw,32px);font-weight:800;margin-bottom:6px;letter-spacing:-0.5px}
+.docs .sub{color:var(--text-2);font-size:14px;margin-bottom:36px}
+.docs h2{font-size:18px;font-weight:700;margin:32px 0 12px;padding-bottom:10px;border-bottom:1px solid var(--border);letter-spacing:-0.3px}
+.docs p{color:var(--text-2);font-size:14px;margin-bottom:14px;line-height:1.7}
+.docs h3{font-size:14px;font-weight:700;margin:24px 0 10px;color:var(--accent)}
+.docs .endpoint{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:8px 14px;background:var(--bg-alt);border-radius:var(--radius-sm);border:1px solid var(--border)}
+.docs .method{padding:3px 8px;border-radius:4px;font-size:10px;font-weight:800;color:#fff;letter-spacing:0.03em}
+.docs .method.post{background:var(--accent)}
+.docs .method.get{background:var(--accent-emerald)}
+.docs code{font-size:13px;font-family:"SF Mono",ui-monospace,monospace;color:var(--text)}
+.docs pre{background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:12px;overflow-x:auto;margin-bottom:18px;font-family:"SF Mono",ui-monospace,monospace;line-height:1.6}
+
+/* ==================== Animations ==================== */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.anim{animation:fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both}
+.anim-d1{animation-delay:0.08s}
+.anim-d2{animation-delay:0.16s}
+.anim-d3{animation-delay:0.24s}
+.anim-d4{animation-delay:0.32s}
+.anim-d5{animation-delay:0.40s}
+.anim-d6{animation-delay:0.48s}
+
+/* ==================== Noise Overlay ==================== */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:0.018;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+/* ==================== Spotlight Border ==================== */
+.spotlight{position:relative}
+.spotlight::before{content:'';position:absolute;inset:-1px;border-radius:inherit;background:radial-gradient(600px circle at var(--mx,50%) var(--my,50%),rgba(67,97,168,0.15),transparent 40%);opacity:0;transition:opacity 0.4s;z-index:0;pointer-events:none}
+.spotlight:hover::before{opacity:1}
+.spotlight>*{position:relative;z-index:1}
+
+/* ==================== Feature Cards (borderless) ==================== */
+.feature-card{background:var(--bg-card);border-radius:var(--radius-lg);padding:36px;transition:var(--transition);border:none;box-shadow:0 1px 3px rgba(67,97,168,0.04)}
+.feature-card:hover{box-shadow:0 8px 32px rgba(67,97,168,0.1);transform:translateY(-3px)}
+
+/* ==================== Pricing (pinned buttons) ==================== */
+.price-card{display:flex;flex-direction:column}
+.price-card .btn{margin-top:auto}
+
+/* ==================== CTA (deeper) ==================== */
+.cta{padding:120px 0;text-align:center;background:var(--text);position:relative;overflow:hidden;color:#fff}
+.cta::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 0%,rgba(67,97,168,0.3),transparent)}
+.cta::after{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");opacity:0.04}
+.cta h2{font-size:clamp(28px,3.5vw,40px);font-weight:800;margin-bottom:16px;letter-spacing:-1.2px;position:relative;z-index:1;text-wrap:balance;color:#fff}
+.cta p{color:rgba(255,255,255,0.65);font-size:16px;margin-bottom:36px;position:relative;z-index:1}
+.cta .btn{position:relative;z-index:1}
+.cta .btn-primary{background:#fff;color:var(--text);box-shadow:0 2px 12px rgba(0,0,0,0.2)}
+.cta .btn-primary:hover{background:#f0f0f0;transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,0.25)}
+
+/* ==================== Stat Cards (borderless) ==================== */
+.stat-card{background:var(--bg-card);border-radius:var(--radius);padding:28px;border:none;box-shadow:0 1px 3px rgba(67,97,168,0.04);transition:var(--transition)}
+.stat-card:hover{box-shadow:0 4px 16px rgba(67,97,168,0.08);transform:translateY(-2px)}
+
+/* ==================== Responsive ==================== */
 @media(max-width:768px){
-  nav .container{padding:0 16px}
-  .nav-links{position:fixed;top:0;right:-280px;width:280px;height:100vh;background:var(--bg-secondary);flex-direction:column;gap:8px;padding:80px 24px 24px;transition:right 0.3s ease;border-left:1px solid var(--border);align-items:stretch}
+  .nav-links{position:fixed;top:0;right:-300px;width:280px;height:100dvh;background:var(--bg-card);flex-direction:column;gap:4px;padding:80px 20px;transition:right 0.3s;border-left:1px solid var(--border);align-items:stretch;box-shadow:-4px 0 24px rgba(0,0,0,0.1)}
   .nav-links.open{right:0}
-  .nav-toggle{display:block}
-  .nav-links .btn-nav{text-align:center;margin-top:8px}
-  .hero{padding:80px 0 60px}
-  .hero-stats{gap:24px;margin-top:40px}
-  .hero-stat .num{font-size:28px}
-  .features-grid,.pricing-grid,.stats-row{grid-template-columns:1fr;gap:16px}
-  .pricing-grid{grid-template-columns:1fr;max-width:360px;margin:0 auto}
-  section{padding:60px 0}
-  footer .grid{grid-template-columns:1fr 1fr;gap:24px}
-  .docs-page pre{font-size:12px;padding:14px}
-  .section-subtitle{margin-bottom:36px}
-  .hero h1{font-size:clamp(28px,7vw,36px)}
-}
-@media(min-width:769px)and(max-width:1024px){
-  .features-grid,.stats-row{grid-template-columns:repeat(2,1fr)}
-  .pricing-grid{grid-template-columns:repeat(2,1fr);max-width:600px;margin:0 auto}
+  .nav-mob{display:block}
+  .hero .wrap{grid-template-columns:1fr;gap:40px;padding:60px 24px}
+  .hero-content{max-width:100%}
+  .hero-carousel{order:-1}
+  .feature-grid{grid-template-columns:1fr}
+  .feature-card.featured{grid-column:span 1;grid-template-columns:1fr}
+  .stats .wrap{grid-template-columns:1fr;gap:40px}
+  .pricing-grid{grid-template-columns:1fr;max-width:380px;margin:0 auto}
+  .price-card.pop{transform:none}
+  .price-card.pop:hover{transform:translateY(-4px)}
+  .footer .wrap{grid-template-columns:1fr 1fr;gap:24px}
+  .user{flex-direction:column}
+  .user-side{width:100%;height:auto;position:static;border-right:none;border-bottom:1px solid var(--border);padding:12px 0;display:flex;overflow-x:auto}
+  .user-side h3{display:none}
+  .user-side a{padding:8px 16px;white-space:nowrap;border-left:none;border-bottom:2px solid transparent;margin:0}
+  .user-side a.on{border-bottom-color:var(--accent);border-left:none}
+  .user-side .div{display:none}
+  .user-main{padding:20px 16px}
+  .user-stats{grid-template-columns:repeat(2,1fr)}
+  .quick-actions{grid-template-columns:1fr}
+  .license-grid{grid-template-columns:1fr}
 }`
 }
 
-// ==================== 导航组件 ====================
-function navComponent(currentPath) {
-  const links = [
-    { href: '/', label: '首页', exact: true },
-    { href: '/features', label: '功能' },
-    { href: '/pricing', label: '定价' },
-    { href: '/docs', label: '开发文档' },
-  ]
-  const navLinks = links.map(l => {
-    const active = l.exact ? currentPath === '/' : currentPath.startsWith(l.href)
-    return `<a href="${l.href}" class="${active ? 'active' : ''}">${l.label}</a>`
-  }).join('')
+function carouselJS(){return `<script>var slideIdx=0,slideCount=2,slideTimer;function moveSlide(d){slideIdx=(slideIdx+d+slideCount)%slideCount;updSlide()}function goSlide(n){slideIdx=n;updSlide()}function updSlide(){var slides=document.querySelectorAll(".carousel-slide");slides.forEach(function(s,i){s.classList.toggle("active",i===slideIdx)});document.querySelectorAll(".carousel-dot").forEach(function(d,i){d.classList.toggle("active",i===slideIdx)});clearInterval(slideTimer);slideTimer=setInterval(function(){moveSlide(1)},5000)}window.addEventListener("load",function(){updSlide()})</script>`}
 
-  return `<nav>
-  <div class="container">
-    <a href="/" class="logo">
-      <svg viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="url(#lg)"/><defs><linearGradient id="lg" x1="0" y1="0" x2="32" y2="32"><stop stop-color="#3B82F6"/><stop offset="1" stop-color="#06B6D4"/></linearGradient></defs><text x="5" y="23" fill="#fff" font-size="20" font-weight="800" font-family="sans-serif">S</text></svg>
-      Shou<span>Yin</span>POS
-    </a>
-    <div class="nav-links" id="navMenu">
-      ${navLinks}
-      <a href="/admin" class="btn-nav" target="_blank">管理后台 →</a>
-    </div>
-    <div class="nav-toggle" id="navToggle" onclick="toggleNav()">
-      <span></span><span></span><span></span>
-    </div>
-  </div>
-</nav>`
-}
+function toggleNav(){var m=document.getElementById('nm'),t=document.getElementById('nt');if(m&&t){m.classList.toggle('open');t.classList.toggle('open')}}
+function handleLogout(){localStorage.removeItem('token');localStorage.removeItem('user');window.location.href='/'}
 
-// ==================== Footer 组件 ====================
-function footerComponent() {
-  const year = new Date().getFullYear()
-  return `<footer>
-  <div class="container">
-    <div class="grid">
-      <div>
-        <h4>ShouYinPOS</h4>
-        <p class="brand-desc">专业的店铺收银管理系统。支持多门店、多终端、多支付方式。商品管理、会员营销、库存管理、经营报表一站式覆盖。</p>
-        <div class="social">
-          <a href="mailto:support@example.com" title="邮箱">✉</a>
-          <a href="#" title="微信">💬</a>
-          <a href="/docs" title="文档">📄</a>
-        </div>
-      </div>
-      <div>
-        <h4>产品</h4>
-        <a href="/features">功能特性</a>
-        <a href="/pricing">定价方案</a>
-        <a href="/docs">开发文档</a>
-      </div>
-      <div>
-        <h4>支持</h4>
-        <a href="/docs">API 文档</a>
-        <a href="mailto:support@example.com">联系我们</a>
-        <a href="#">常见问题</a>
-      </div>
-      <div>
-        <h4>管理</h4>
-        <a href="/admin">管理后台</a>
-        <a href="/docs#api">API 参考</a>
-        <a href="/pricing">定价</a>
-      </div>
-    </div>
-    <div class="bottom">
-      <span>© ${year} ShouYinPOS. All rights reserved.</span>
-      <span>Built on Cloudflare Workers</span>
-    </div>
-  </div>
-</footer>`
-}
-
-// ==================== 客户端 JS ====================
-function clientJS() {
-  return `<script>
-document.addEventListener('DOMContentLoaded',function(){
-  /* IntersectionObserver 滚动淡入 */
-  var fadeEls=document.querySelectorAll('.fade-up');
-  if(fadeEls.length>0&&'IntersectionObserver'in window){
-    var obs=new IntersectionObserver(function(entries){
-      entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');obs.unobserve(e.target)}})
-    },{threshold:0.1});
-    fadeEls.forEach(function(el){obs.observe(el)})
-  }else{fadeEls.forEach(function(el){el.classList.add('visible')})}
-  /* 数字滚动动画 */
-  var countEls=document.querySelectorAll('.count-up');
-  countEls.forEach(function(el){
-    var target=parseInt(el.getAttribute('data-target'))||0;
-    var duration=parseInt(el.getAttribute('data-duration'))||2000;
-    var start=performance.now();
-    function update(now){
-      var elapsed=now-start;
-      var progress=Math.min(elapsed/duration,1);
-      var eased=1-Math.pow(1-progress,3);
-      el.textContent=Math.round(eased*target);
-      if(progress<1)requestAnimationFrame(update)
-    }
-    requestAnimationFrame(update)
-  })
-});
-function toggleNav(){
-  var menu=document.getElementById('navMenu');
-  var toggle=document.getElementById('navToggle');
-  if(menu&&toggle){menu.classList.toggle('open');toggle.classList.toggle('open')}
-}
-document.addEventListener('click',function(e){
-  var menu=document.getElementById('navMenu');
-  var toggle=document.getElementById('navToggle');
-  if(menu&&menu.classList.contains('open')&&!menu.contains(e.target)&&e.target!==toggle&&!toggle.contains(e.target)){
-    menu.classList.remove('open');toggle.classList.remove('open')
-  }
-});
-</script>`
-}
-
-// ==================== Page Shell ====================
-function shell(opts) {
-  const siteName = opts.env?.SITE_NAME || 'ShouYinPOS'
+// Shell
+function shell(o) {
   const css = buildCSS()
-  return `<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>${opts.title} - ${siteName}</title>
-<meta name="description" content="${opts.description}">
-<style>${css}</style>
-</head>
-<body>
-${navComponent(opts.currentPath)}
-${opts.content}
-${footerComponent()}
-${clientJS()}
-</body>
-</html>`
+  const noNav = ['/login','/register','/forgot'].includes(o.path)
+  const isUser = ['/dashboard','/licenses','/orders','/profile'].includes(o.path)
+  return `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${o.title} - ShouYinPOS</title><meta name="description" content="${o.desc}"><meta property="og:title" content="${o.title} - ShouYinPOS"><meta property="og:description" content="${o.desc}"><meta property="og:type" content="website"><link rel="icon" href="data:image/svg+xml,<svg viewBox='0 0 28 28' xmlns='http://www.w3.org/2000/svg'><rect width='28' height='28' rx='6' fill='%231b1f2b'/><text x='6' y='19' fill='fff' font-size='15' font-weight='700' font-family='system-ui'>S</text></svg>"><style>${css}</style></head><body><a href="#main" class="skip-link">跳转到主要内容</a>${noNav?'':isUser?userNav():nav(o.path)}<main id="main">${o.html}</main>${noNav?'':footer()}<script>
+document.addEventListener('click',function(e){var m=document.getElementById('nm'),t=document.getElementById('nt');if(m&&m.classList.contains('open')&&!m.contains(e.target)&&e.target!==t){m.classList.remove('open');t.classList.remove('open')}});
+function toggleNav(){var m=document.getElementById('nm'),t=document.getElementById('nt');if(m&&t){m.classList.toggle('open');t.classList.toggle('open')}}
+function handleLogout(){localStorage.removeItem('token');localStorage.removeItem('user');window.location.href='/'}
+document.querySelectorAll('.spotlight').forEach(function(el){el.addEventListener('mousemove',function(e){var r=el.getBoundingClientRect();el.style.setProperty('--mx',(e.clientX-r.left)+'px');el.style.setProperty('--my',(e.clientY-r.top)+'px')})});
+</script>${o.extra||''}</body></html>`
 }
 
-// ==================== 首页 ====================
+function nav(path) {
+  const links = [{href:'/',label:'首页',exact:true},{href:'/pricing',label:'定价'},{href:'/features',label:'功能'},{href:'/docs',label:'文档'}]
+  const items = links.map(l => `<a href="${l.href}" class="${(l.exact?path===l.href:path.startsWith(l.href))?'on':''}">${l.label}</a>`).join('')
+  return `<nav class="nav"><div class="wrap"><a href="/" class="logo"><svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#1b1f2b"/><text x="6" y="19" fill="#fff" font-size="15" font-weight="700" font-family="system-ui">S</text></svg>ShouYinPOS</a><div class="nav-links" id="nm">${items}<a href="/login" class="nav-btn">登录</a></div><div class="nav-mob" id="nt" onclick="toggleNav()"><span></span><span></span><span></span></div></div></nav>`
+}
+
+function userNav() {
+  return `<nav class="nav"><div class="wrap"><a href="/" class="logo"><svg viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="6" fill="#1b1f2b"/><text x="6" y="19" fill="#fff" font-size="15" font-weight="700" font-family="system-ui">S</text></svg>ShouYinPOS</a><div class="nav-links" id="nm"><a href="/">首页</a><a href="/pricing">定价</a><a href="/dashboard">控制台</a><a href="#" onclick="handleLogout();return false" class="nav-btn">退出</a></div><div class="nav-mob" id="nt" onclick="toggleNav()"><span></span><span></span><span></span></div></div></nav>`
+}
+
+function footer() {
+  const y = new Date().getFullYear()
+  return `<footer class="footer"><div class="wrap"><div><h4>ShouYinPOS</h4><p style="font-size:13px;color:var(--text-2);line-height:1.7;max-width:260px">专业的店铺收银管理系统，支持多门店、多终端、多支付方式。</p></div><div><h4>产品</h4><a href="/features">功能特性</a><a href="/pricing">定价方案</a><a href="/docs">开发文档</a></div><div><h4>支持</h4><a href="mailto:support@shouyinpos.com">联系我们</a><a href="/docs">帮助中心</a></div><div><h4>法律</h4><a href="#">隐私政策</a><a href="#">服务条款</a><a href="#">Cookie 设置</a></div></div><div class="wrap"><div class="copy"><span>&copy; ${y} ShouYinPOS</span><span>Powered by Cloudflare Workers</span></div></div></footer>`
+}
+
+// ==================== PAGES ====================
+
 export function homePage(env) {
-  const content = `
+  const html = `
 <section class="hero">
-  <div class="hero-grid"></div>
-  <div class="container">
-    <div class="hero-badge fade-up"><span class="dot"></span> v2.0 — 全新 Cloudflare 原生架构</div>
-    <h1 class="fade-up stagger-1">轻盈高效的<br><span class="gradient">店铺收银管理系统</span></h1>
-    <p class="fade-up stagger-2">支持多门店、多终端、多支付方式。提供商品管理、会员营销、库存管理、经营报表等完整功能。基于 Cloudflare Workers 构建，全球加速。</p>
-    <div class="btns fade-up stagger-3">
-      <a href="/pricing" class="primary">查看定价 <span>→</span></a>
-      <a href="/features" class="secondary">了解更多</a>
+  <div class="wrap">
+    <div class="hero-content">
+      <h1 class="anim">让每一笔收银都快人一步</h1>
+      <p class="anim anim-d1">多门店、多终端、全场景收银管理。全球 50+ 边缘节点加速，10ms 内响应，让店铺经营更高效。</p>
+      <div class="hero-btns anim anim-d2">
+        <a href="/register" class="btn btn-primary">免费开始</a>
+        <a href="/features" class="btn btn-outline">了解功能</a>
+      </div>
     </div>
-    <div class="hero-stats fade-up stagger-4">
-      <div class="hero-stat"><div class="num count-up" data-target="4" data-duration="1000">0</div><div class="label">产品版本</div></div>
-      <div class="hero-stat"><div class="num count-up" data-target="50000" data-duration="2000">0</div><div class="label">最大商品数</div></div>
-      <div class="hero-stat"><div class="num count-up" data-target="99" data-duration="1500">0</div><div class="label">% 正常运行</div></div>
-      <div class="hero-stat"><div class="num count-up" data-target="10" data-duration="1000">0</div><div class="label">毫秒响应</div></div>
-    </div>
-  </div>
-</section>
-
-<section class="section-dark">
-  <div class="container">
-    <h2 class="section-title fade-up">核心<span class="highlight">功能</span></h2>
-    <p class="section-subtitle fade-up">覆盖店铺经营的每一个环节，从收银到管理全链路覆盖</p>
-    <div class="features-grid">
-      <div class="feature-card fade-up stagger-1"><div class="feature-icon glow-blue">🛒</div><h3>快速收银</h3><p>支持扫码枪、搜索、分类浏览等多种商品查找方式，混合支付一单完成。</p></div>
-      <div class="feature-card fade-up stagger-1"><div class="feature-icon glow-cyan">🏷️</div><h3>商品管理</h3><p>完整的商品信息管理，支持多规格 SKU、组合商品、计重商品、服务类商品。</p></div>
-      <div class="feature-card fade-up stagger-2"><div class="feature-icon glow-green">💳</div><h3>会员系统</h3><p>会员等级、积分、余额、优惠券、营销活动一站式管理，提升复购率。</p></div>
-      <div class="feature-card fade-up stagger-2"><div class="feature-icon glow-purple">📊</div><h3>经营报表</h3><p>销售额趋势、商品排行、分类分析、利润统计，数据驱动经营决策。</p></div>
-      <div class="feature-card fade-up stagger-3"><div class="feature-icon glow-amber">📦</div><h3>库存管理</h3><p>采购入库、库存盘点、保质期预警、多仓库管理，库存数据实时更新。</p></div>
-      <div class="feature-card fade-up stagger-3"><div class="feature-icon glow-pink">🔗</div><h3>多终端同步</h3><p>支持多台收银终端同时运行，数据实时同步。后台可远程管理所有终端。</p></div>
+    <div class="hero-carousel anim anim-d1">
+      <div class="carousel" id="heroCarousel">
+        <div class="carousel-slide active"><img src="https://master.shouquan-assets.pages.dev/syt.png" alt="ShouYinPOS 收银系统界面展示" /></div>
+        <div class="carousel-slide"><img src="https://master.shouquan-assets.pages.dev/ht.png" alt="ShouYinPOS 管理后台界面展示" /></div>
+        <button class="carousel-btn prev" onclick="moveSlide(-1)" aria-label="上一张"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button class="carousel-btn next" onclick="moveSlide(1)" aria-label="下一张"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+        <div class="carousel-nav"><button class="carousel-dot active" onclick="goSlide(0)" aria-label="第 1 张"></button><button class="carousel-dot" onclick="goSlide(1)" aria-label="第 2 张"></button></div>
+      </div>
     </div>
   </div>
 </section>
 
-<section>
-  <div class="container">
-    <h2 class="section-title fade-up">值得<span class="highlight">信赖</span></h2>
-    <p class="section-subtitle fade-up">全球加速部署，毫秒级响应</p>
-    <div class="stats-row">
-      <div class="stat-card fade-up"><div class="num count-up" data-target="99.9" data-duration="2000">0</div><div class="label">SLA 保障</div></div>
-      <div class="stat-card fade-up stagger-1"><div class="num"><span class="count-up" data-target="100" data-duration="1500">0</span><span class="suffix">k+</span></div><div class="label">日均请求处理</div></div>
-      <div class="stat-card fade-up stagger-2"><div class="num"><span class="count-up" data-target="50" data-duration="1000">0</span><span class="suffix">+</span></div><div class="label">全球边缘节点</div></div>
-      <div class="stat-card fade-up stagger-3"><div class="num"><span class="count-up" data-target="10" data-duration="1000">0</span><span class="suffix">ms</span></div><div class="label">平均响应时间</div></div>
+<section class="features">
+  <div class="wrap">
+    <div class="section-header anim"><h2>为零售场景打造的功能</h2><p>从收银到库存，从会员到报表，一个系统覆盖店铺经营全链路。</p></div>
+    <div class="feature-grid">
+      <div class="feature-card featured spotlight anim anim-d1"><div><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><h3>快速收银</h3><p>支持扫码枪、搜索、分类浏览等多种商品查找方式，混合支付一单完成。微信、支付宝、现金、银行卡全渠道覆盖。</p></div><div style="background:var(--bg-alt);border-radius:var(--radius);height:200px;display:flex;align-items:center;justify-content:center;color:var(--text-3);font-size:13px">收银界面预览</div></div>
+      <div class="feature-card spotlight anim anim-d2"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div><h3>商品管理</h3><p>多规格 SKU、计重商品、批量导入导出，轻松管理海量商品数据。</p></div>
+      <div class="feature-card spotlight anim anim-d3"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div><h3>会员系统</h3><p>等级、积分、余额、优惠券，精细化运营每一位顾客。</p></div>
+      <div class="feature-card spotlight anim anim-d2"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><h3>经营报表</h3><p>销售趋势、商品排行、利润统计，用数据驱动决策。</p></div>
+      <div class="feature-card spotlight anim anim-d3"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div><h3>库存管理</h3><p>采购入库、盘点、保质期预警、多仓库调拨，库存尽在掌控。</p></div>
+      <div class="feature-card spotlight anim anim-d4"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div><h3>多终端同步</h3><p>多台终端同时运行，数据实时同步，门店之间无缝协作。</p></div>
     </div>
   </div>
 </section>
 
-<section class="section-dark">
-  <div class="container">
-    <h2 class="section-title fade-up">选择<span class="highlight">方案</span></h2>
-    <p class="section-subtitle fade-up">灵活定价，按需选择，免费入门</p>
+<section class="stats">
+  <div class="wrap">
+    <div class="stats-head anim">
+      <div class="big">99.97<span>%</span></div>
+      <div class="sub">服务可用性保障<br>全球 50+ 边缘节点，平均响应时间 &lt;10ms</div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-card spotlight anim anim-d1"><div class="num">127<span>ms</span></div><div class="lbl">平均响应时间</div></div>
+      <div class="stat-card spotlight anim anim-d2"><div class="num">50<span>+</span></div><div class="lbl">全球边缘节点</div></div>
+      <div class="stat-card spotlight anim anim-d3"><div class="num">2.4<span>M</span></div><div class="lbl">月处理交易数</div></div>
+      <div class="stat-card spotlight anim anim-d4"><div class="num">98<span>%</span></div><div class="lbl">客户续费率</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="pricing">
+  <div class="wrap">
+    <div class="section-header center anim"><h2>简单透明的定价</h2><p>按年付费，无隐藏费用。所有方案均含基础收银、商品管理、会员系统。</p></div>
     <div class="pricing-grid">
-      <div class="pricing-card fade-up">
-        <div class="plan-name">基础版</div>
-        <div class="price"><span class="currency">¥</span>0</div>
-        <div class="price-desc">免费使用</div>
-        <ul>
-          <li><span class="check">✓</span> 1 台收银终端</li>
-          <li><span class="check">✓</span> 5,000 商品管理</li>
-          <li><span class="check">✓</span> 2,000 会员</li>
-          <li><span class="check">✓</span> 基础收银功能</li>
-          <li><span class="check">✓</span> 基础经营报表</li>
-        </ul>
-        <a href="/admin" class="btn btn-outline">免费开始</a>
-      </div>
-      <div class="pricing-card featured fade-up stagger-1">
-        <div class="plan-name">标准版</div>
-        <div class="price"><span class="currency">¥</span>99<span class="period">/月</span></div>
-        <div class="price-desc">适合成长型店铺</div>
-        <ul>
-          <li><span class="check">✓</span> 3 台收银终端</li>
-          <li><span class="check">✓</span> 10,000 商品管理</li>
-          <li><span class="check">✓</span> 5,000 会员</li>
-          <li><span class="check">✓</span> 会员 + 营销功能</li>
-          <li><span class="check">✓</span> 优惠券系统</li>
-        </ul>
-        <a href="/admin" class="btn btn-primary">立即订阅</a>
-      </div>
-      <div class="pricing-card fade-up stagger-2">
-        <div class="plan-name">高级版</div>
-        <div class="price"><span class="currency">¥</span>299<span class="period">/月</span></div>
-        <div class="price-desc">适合大规模运营</div>
-        <ul>
-          <li><span class="check">✓</span> 10 台收银终端</li>
-          <li><span class="check">✓</span> 50,000 商品管理</li>
-          <li><span class="check">✓</span> 20,000 会员</li>
-          <li><span class="check">✓</span> 全部功能解锁</li>
-          <li><span class="check">✓</span> 库存 + 供应商管理</li>
-        </ul>
-        <a href="/admin" class="btn btn-outline">立即订阅</a>
-      </div>
-      <div class="pricing-card fade-up stagger-3">
-        <div class="plan-name">企业版</div>
-        <div class="price">定制</div>
-        <div class="price-desc">专属解决方案</div>
-        <ul>
-          <li><span class="check">✓</span> 不限终端数量</li>
-          <li><span class="check">✓</span> 不限商品数量</li>
-          <li><span class="check">✓</span> 不限会员数量</li>
-          <li><span class="check">✓</span> 全部高级功能</li>
-          <li><span class="check">✓</span> 专属技术支持</li>
-        </ul>
-        <a href="mailto:support@example.com" class="btn btn-outline">联系我们</a>
-      </div>
+      <div class="price-card spotlight anim anim-d1"><div class="name">基础版</div><div class="price">¥99<span>/年</span></div><div class="desc">适合单店小型商户</div><ul><li><span class="ck">&#10003;</span>1 个门店</li><li><span class="ck">&#10003;</span>1 台终端</li><li><span class="ck">&#10003;</span>5,000 商品</li><li><span class="ck">&#10003;</span>2,000 会员</li></ul><a href="/register" class="btn btn-outline">开始使用</a></div>
+      <div class="price-card pop spotlight anim anim-d2"><div class="name">专业版</div><div class="price">¥299<span>/年</span></div><div class="desc">适合连锁门店</div><ul><li><span class="ck">&#10003;</span>3 个门店</li><li><span class="ck">&#10003;</span>5 台终端</li><li><span class="ck">&#10003;</span>20,000 商品</li><li><span class="ck">&#10003;</span>10,000 会员</li></ul><a href="/register" class="btn">立即购买</a></div>
+      <div class="price-card spotlight anim anim-d3"><div class="name">企业版</div><div class="price">¥999<span>/年</span></div><div class="desc">适合大型连锁企业</div><ul><li><span class="ck">&#10003;</span>10 个门店</li><li><span class="ck">&#10003;</span>20 台终端</li><li><span class="ck">&#10003;</span>100,000 商品</li><li><span class="ck">&#10003;</span>专属客服支持</li></ul><a href="/register" class="btn btn-outline">联系我们</a></div>
     </div>
   </div>
 </section>
 
-<section class="cta-section section-dark" style="border-top:1px solid var(--border)">
-  <div class="container">
-    <h2 class="fade-up">准备好开始了吗？</h2>
-    <p class="fade-up stagger-1">免费试用，无需信用卡。基于 Cloudflare Workers 架构，全球加速部署。</p>
-    <div class="fade-up stagger-2"><a href="/admin" class="btn-cta">进入管理后台 <span>→</span></a></div>
+<section class="cta">
+  <div class="wrap">
+    <h2>开始管理你的店铺</h2>
+    <p>注册即享免费试用，无需信用卡，随时可取消。</p>
+    <a href="/register" class="btn btn-primary">免费注册</a>
   </div>
 </section>`
-  return shell({ title: '首页', description: '专业的店铺收银管理系统 - 基于 Cloudflare Workers 构建，支持多门店、多终端、多支付方式', content, env, currentPath: '/' })
+  return shell({ title: '首页', desc: '专业的店铺收银管理系统 — 多门店、多终端、全场景收银管理', html, path: '/', extra: carouselJS() })
 }
 
-// ==================== 功能特性 ====================
 export function featuresPage(env) {
-  const content = `
-<section class="page-hero">
-  <div class="container">
-    <h1 class="fade-up">完整<span class="gradient">功能特性</span></h1>
-    <p class="fade-up stagger-1">从收银到管理，覆盖店铺运营全场景</p>
-  </div>
-</section>
-
-<section>
-  <div class="container">
-    <h2 class="section-title fade-up"><span class="highlight">收银</span>功能</h2>
-    <p class="section-subtitle fade-up">收银环节的高效与准确</p>
-    <div class="features-grid">
-      <div class="feature-card fade-up"><div class="feature-icon glow-blue">📷</div><h3>快速扫码</h3><p>支持条码/二维码扫码枪，即扫即售，无需手动输入。</p></div>
-      <div class="feature-card fade-up stagger-1"><div class="feature-icon glow-cyan">💳</div><h3>混合支付</h3><p>现金、微信、支付宝、会员余额、优惠券自由组合支付。</p></div>
-      <div class="feature-card fade-up stagger-1"><div class="feature-icon glow-green">📋</div><h3>挂单/取单</h3><p>临时挂起当前订单，处理完其他顾客后再取单继续。</p></div>
-      <div class="feature-card fade-up stagger-2"><div class="feature-icon glow-purple">🎨</div><h3>多规格商品</h3><p>支持颜色、尺码等多规格 SKU，自动匹配价格和库存。</p></div>
-      <div class="feature-card fade-up stagger-2"><div class="feature-icon glow-amber">⚖️</div><h3>计重商品</h3><p>支持电子秤输入，按重量计价，适用于散装/称重商品。</p></div>
-      <div class="feature-card fade-up stagger-3"><div class="feature-icon glow-pink">↩</div><h3>退款处理</h3><p>支持整单退款和部分退款，自动回滚库存和统计数据。</p></div>
-    </div>
-  </div>
-</section>
-
-<section class="section-dark">
-  <div class="container">
-    <h2 class="section-title fade-up"><span class="highlight">管理</span>功能</h2>
-    <p class="section-subtitle fade-up">后台管理，运筹帷幄</p>
-    <div class="features-grid">
-      <div class="feature-card fade-up"><div class="feature-icon glow-blue">🏷️</div><h3>商品管理</h3><p>商品分类、品牌、标签、图片管理，支持批量导入导出。</p></div>
-      <div class="feature-card fade-up stagger-1"><div class="feature-icon glow-cyan">🎯</div><h3>会员营销</h3><p>等级体系、积分规则、优惠券生成、满减活动灵活配置。</p></div>
-      <div class="feature-card fade-up stagger-1"><div class="feature-icon glow-green">⚠️</div><h3>库存预警</h3><p>设置安全库存，自动预警，防止缺货影响销售。</p></div>
-      <div class="feature-card fade-up stagger-2"><div class="feature-icon glow-purple">📈</div><h3>经营报表</h3><p>日/周/月报，利润分析，商品排行，趋势图表直观展示。</p></div>
-      <div class="feature-card fade-up stagger-2"><div class="feature-icon glow-amber">👥</div><h3>员工管理</h3><p>角色权限、员工账号、PIN 码登录、班次管理一应俱全。</p></div>
-      <div class="feature-card fade-up stagger-3"><div class="feature-icon glow-pink">📦</div><h3>采购管理</h3><p>采购订单、供应商管理、入库验收完整闭环。</p></div>
+  const html = `
+<section class="features" style="padding-top:80px">
+  <div class="wrap">
+    <div class="section-header"><h2>功能特性</h2><p>全方位覆盖店铺经营需求，从收银到管理，一个系统搞定。</p></div>
+    <div class="feature-grid">
+      <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><h3>多支付方式</h3><p>现金、微信、支付宝、银行卡，混合支付一单完成。</p></div>
+      <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></div><h3>商品管理</h3><p>多规格 SKU、计重商品、批量导入导出，轻松管理海量商品。</p></div>
+      <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><h3>会员系统</h3><p>等级、积分、余额、优惠券、营销活动，精细化运营每一位顾客。</p></div>
+      <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div><h3>经营报表</h3><p>销售趋势、商品排行、利润统计，用数据驱动每一项决策。</p></div>
+      <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div><h3>库存管理</h3><p>采购入库、盘点、保质期预警、多仓库调拨，库存尽在掌控。</p></div>
+      <div class="feature-card"><div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div><h3>多终端同步</h3><p>多台终端同时运行，数据实时同步，门店之间无缝协作。</p></div>
     </div>
   </div>
 </section>`
-  return shell({ title: '功能特性', description: '店铺收银系统的完整功能列表 - 收银 / 商品 / 会员 / 库存 / 报表', content, env, currentPath: '/features' })
+  return shell({ title: '功能特性', desc: 'ShouYinPOS 功能特性 — 全方位覆盖店铺经营需求', html, path: '/features' })
 }
 
-// ==================== 定价 ====================
 export function pricingPage(env) {
-  const content = `
-<section class="page-hero">
-  <div class="container">
-    <h1 class="fade-up">选择<span class="gradient">适合您的方案</span></h1>
-    <p class="fade-up stagger-1">灵活定价，按需选择，从免费开始</p>
-  </div>
-</section>
-
-<section class="section-dark">
-  <div class="container">
-    <h2 class="section-title fade-up">定价<span class="highlight">方案</span></h2>
-    <p class="section-subtitle fade-up">透明定价，无隐性费用</p>
+  const html = `
+<section class="pricing" style="min-height:80dvh;display:flex;align-items:center">
+  <div class="wrap" style="width:100%">
+    <div class="section-header center"><h2>选择适合你的方案</h2><p>所有方案均含基础收银、商品管理、会员系统。按年付费，无隐藏费用。</p></div>
     <div class="pricing-grid">
-      <div class="pricing-card fade-up">
-        <div class="plan-name">基础版</div>
-        <div class="price"><span class="currency">¥</span>0</div>
-        <div class="price-desc">适合小型店铺</div>
-        <ul>
-          <li><span class="check">✓</span> 1 台收银终端</li>
-          <li><span class="check">✓</span> 5,000 商品</li>
-          <li><span class="check">✓</span> 2,000 会员</li>
-          <li><span class="check">✓</span> 基础收银 + 报表</li>
-        </ul>
-        <a href="/admin" class="btn btn-outline">免费使用</a>
-      </div>
-      <div class="pricing-card featured fade-up stagger-1">
-        <div class="plan-name">标准版</div>
-        <div class="price"><span class="currency">¥</span>99<span class="period">/月</span></div>
-        <div class="price-desc">适合成长型店铺</div>
-        <ul>
-          <li><span class="check">✓</span> 3 台收银终端</li>
-          <li><span class="check">✓</span> 10,000 商品</li>
-          <li><span class="check">✓</span> 5,000 会员</li>
-          <li><span class="check">✓</span> 会员 + 营销 + 优惠券</li>
-        </ul>
-        <a href="/admin" class="btn btn-primary">立即订阅</a>
-      </div>
-      <div class="pricing-card fade-up stagger-2">
-        <div class="plan-name">高级版</div>
-        <div class="price"><span class="currency">¥</span>299<span class="period">/月</span></div>
-        <div class="price-desc">适合大规模运营</div>
-        <ul>
-          <li><span class="check">✓</span> 10 台收银终端</li>
-          <li><span class="check">✓</span> 50,000 商品</li>
-          <li><span class="check">✓</span> 20,000 会员</li>
-          <li><span class="check">✓</span> 全部功能 + 库存管理</li>
-        </ul>
-        <a href="/admin" class="btn btn-outline">立即订阅</a>
-      </div>
-      <div class="pricing-card fade-up stagger-3">
-        <div class="plan-name">企业版</div>
-        <div class="price">联系</div>
-        <div class="price-desc">专属定制</div>
-        <ul>
-          <li><span class="check">✓</span> 不限终端</li>
-          <li><span class="check">✓</span> 不限商品 + 会员</li>
-          <li><span class="check">✓</span> 全部高级功能</li>
-          <li><span class="check">✓</span> 专属技术支持</li>
-        </ul>
-        <a href="mailto:support@example.com" class="btn btn-outline">联系我们</a>
-      </div>
+      <div class="price-card"><div class="name">基础版</div><div class="price">¥99<span>/年</span></div><div class="desc">适合单店小型商户</div><ul><li><span class="ck">&#10003;</span>1 个门店</li><li><span class="ck">&#10003;</span>1 台终端</li><li><span class="ck">&#10003;</span>5,000 商品</li><li><span class="ck">&#10003;</span>2,000 会员</li></ul><a href="/register" class="btn btn-outline">开始使用</a></div>
+      <div class="price-card pop"><div class="name">专业版</div><div class="price">¥299<span>/年</span></div><div class="desc">适合连锁门店</div><ul><li><span class="ck">&#10003;</span>3 个门店</li><li><span class="ck">&#10003;</span>5 台终端</li><li><span class="ck">&#10003;</span>20,000 商品</li><li><span class="ck">&#10003;</span>10,000 会员</li></ul><a href="/register" class="btn">立即购买</a></div>
+      <div class="price-card"><div class="name">企业版</div><div class="price">¥999<span>/年</span></div><div class="desc">适合大型连锁企业</div><ul><li><span class="ck">&#10003;</span>10 个门店</li><li><span class="ck">&#10003;</span>20 台终端</li><li><span class="ck">&#10003;</span>100,000 商品</li><li><span class="ck">&#10003;</span>专属客服支持</li></ul><a href="/register" class="btn btn-outline">联系我们</a></div>
     </div>
   </div>
 </section>`
-  return shell({ title: '定价方案', description: '选择适合您店铺的定价方案 - 免费基础版 / 标准版 ¥99/月 / 高级版 ¥299/月', content, env, currentPath: '/pricing' })
+  return shell({ title: '定价方案', desc: 'ShouYinPOS 定价方案 — 简单透明，按需选择', html, path: '/pricing' })
 }
 
-// ==================== 开发文档 ====================
 export function docsPage(env) {
-  const content = `
-<div class="docs-page">
-  <h1 class="fade-up">开发<span class="gradient">文档</span></h1>
-  <p class="lead fade-up stagger-1">收银系统授权 API 接入文档</p>
-
-  <h2>授权 API</h2>
-  <p>收银系统通过以下 API 与授权系统通信，完成激活和心跳检测。所有请求 Content-Type 为 <code>application/json</code>。</p>
-
-  <h3>在线激活</h3>
-  <p>使用授权码和硬件指纹完成首次激活，返回实例 ID 和授权信息。</p>
-  <div class="endpoint"><span class="method post">POST</span><code>/api/v1/activate</code></div>
-  <pre>{
-  "license_key": "POS-XXXX-XXXX-XXXX-XXXX",
-  "hardware_fingerprint": "sha256_fingerprint",
-  "store_name": "店铺名称",
-  "fingerprint_detail": { ... }
-}</pre>
-
-  <h3>心跳上报</h3>
-  <p>定期上报心跳，维持授权有效性。建议间隔 5-10 分钟。</p>
-  <div class="endpoint"><span class="method post">POST</span><code>/api/v1/heartbeat</code></div>
-  <pre>{
-  "instance_id": "uuid_v4",
-  "hardware_fingerprint": "sha256_fingerprint"
-}</pre>
-
-  <h3 id="api">查询实例状态</h3>
-  <p>查询指定实例的授权状态。</p>
-  <div class="endpoint"><span class="method get">GET</span><code>/api/v1/status/:instanceId</code></div>
-
-  <h2>管理 API</h2>
-  <p>管理后台 API 需要 JWT 认证，在请求头中携带 <code>Authorization: Bearer &lt;token&gt;</code>。</p>
-
-  <h3>管理员登录</h3>
-  <div class="endpoint"><span class="method post">POST</span><code>/api/auth/login</code></div>
-  <pre>{
-  "username": "admin",
-  "password": "your_password"
-}</pre>
-
-  <h3>创建授权码</h3>
-  <div class="endpoint"><span class="method post">POST</span><code>/api/licenses</code></div>
-  <pre>{
-  "product_edition": "standard",
-  "valid_days": 365,
-  "customer_name": "客户名称",
-  "note": "备注"
-}</pre>
-
-  <h3>获取授权码列表</h3>
-  <div class="endpoint"><span class="method get">GET</span><code>/api/licenses?page=1&pageSize=20</code></div>
-
-  <h3>吊销授权码</h3>
-  <div class="endpoint"><span class="method post">POST</span><code>/api/licenses/:id/revoke</code></div>
-
-  <div class="tip-box">
-    <strong>💡 提示：</strong> 所有管理 API 需要在请求头中携带 <code>Authorization: Bearer &lt;token&gt;</code>。Token 有效期为 8 小时，过期需重新登录。
+  const html = `
+<section class="docs">
+  <div class="wrap">
+    <h1>开发文档</h1>
+    <p class="sub">收银系统授权 API 接入文档</p>
+    <h2>授权 API</h2>
+    <p>收银系统通过以下 API 完成激活和心跳检测。</p>
+    <h3>在线激活</h3>
+    <div class="endpoint"><span class="method post">POST</span><code>/api/v1/activate</code></div>
+    <pre>{"license_key":"POS-XXXX-XXXX-XXXX","hardware_fingerprint":"sha256...","store_name":"店铺名称"}</pre>
+    <h3>心跳上报</h3>
+    <div class="endpoint"><span class="method post">POST</span><code>/api/v1/heartbeat</code></div>
+    <pre>{"instance_id":"uuid_v4","hardware_fingerprint":"sha256..."}</pre>
+    <h3>查询状态</h3>
+    <div class="endpoint"><span class="method get">GET</span><code>/api/v1/status/:instanceId</code></div>
   </div>
-</div>`
-  return shell({ title: '开发文档', description: '授权系统 API 开发文档 - 在线激活 / 心跳上报 / 授权码管理', content, env, currentPath: '/docs' })
+</section>`
+  return shell({ title: '开发文档', desc: 'ShouYinPOS API 文档 — 授权系统接入指南', html, path: '/docs' })
 }
+
+export function loginPage(env) {
+  const apiBase = (env.SITE_URL || 'https://www.lequ.pw') + '/api'
+  const html = `<div class="auth"><div class="auth-box"><h1>登录</h1><p class="sub">登录你的 ShouYinPOS 账号</p><form onsubmit="return doLogin(event)"><div class="fg"><label>邮箱 / 手机号</label><input id="la" placeholder="请输入邮箱或手机号" required></div><div class="fg"><label>密码</label><input type="password" id="lp" placeholder="请输入密码" required></div><div class="err" id="le"></div><button type="submit" class="btn btn-primary btn-full" id="lb">登录</button></form><div class="auth-foot"><a href="/forgot">忘记密码？</a><span>还没有账号？<a href="/register">立即注册</a></span></div></div></div>`
+  return shell({ title: '登录', desc: '登录 ShouYinPOS 账号', html, path: '/login', extra: `<script>var A='${apiBase}';function doLogin(e){e.preventDefault();var b=document.getElementById('lb'),er=document.getElementById('le'),a=document.getElementById('la').value,p=document.getElementById('lp').value;if(!a||!p){er.textContent='请输入账号和密码';return false}b.disabled=true;b.textContent='登录中...';er.textContent='';fetch(A+'/user/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({account:a,password:p})}).then(function(r){return r.json()}).then(function(d){if(d.code){er.textContent=d.message;b.disabled=false;b.textContent='登录';return}localStorage.setItem('token',d.data.token);localStorage.setItem('user',JSON.stringify(d.data.user));window.location.href='/dashboard'}).catch(function(){er.textContent='网络错误，请重试';b.disabled=false;b.textContent='登录'});return false}</script>` })
+}
+
+export function registerPage(env) {
+  const apiBase = (env.SITE_URL || 'https://www.lequ.pw') + '/api'
+  const html = `<div class="auth"><div class="auth-box"><h1>注册</h1><p class="sub">创建你的 ShouYinPOS 账号</p><form onsubmit="return doReg(event)"><div class="fg"><label>邮箱</label><input type="email" id="re" placeholder="请输入邮箱" required></div><div class="fg"><label>密码</label><input type="password" id="rp" placeholder="至少 6 位" required minlength="6"></div><div class="fg"><label>昵称</label><input id="rn" placeholder="选填"></div><div class="fg"><label>公司名称</label><input id="rc" placeholder="选填"></div><div class="err" id="rr"></div><button type="submit" class="btn btn-primary btn-full" id="rb">注册</button></form><div class="auth-foot"><span>已有账号？<a href="/login">立即登录</a></span></div></div></div>`
+  return shell({ title: '注册', desc: '注册 ShouYinPOS 账号', html, path: '/register', extra: `<script>var A='${apiBase}';function doReg(e){e.preventDefault();var b=document.getElementById('rb'),er=document.getElementById('rr'),em=document.getElementById('re').value,pw=document.getElementById('rp').value,ni=document.getElementById('rn').value,co=document.getElementById('rc').value;if(!em||!pw){er.textContent='请输入邮箱和密码';return false}b.disabled=true;b.textContent='注册中...';er.textContent='';fetch(A+'/user/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em,password:pw,nickname:ni,company:co})}).then(function(r){return r.json()}).then(function(d){if(d.code){er.textContent=d.message;b.disabled=false;b.textContent='注册';return}localStorage.setItem('token',d.data.token);localStorage.setItem('user',JSON.stringify(d.data.user));window.location.href='/dashboard'}).catch(function(){er.textContent='网络错误，请重试';b.disabled=false;b.textContent='注册'});return false}</script>` })
+}
+
+export function dashboardPage(env) {
+  const apiBase = (env.SITE_URL || 'https://www.lequ.pw') + '/api'
+  const html = `<div class="user"><div class="user-wrap">${userSide('/dashboard')}<div class="user-main"><div class="user-head"><div><h1>控制台</h1><p class="sub">欢迎回来，<span id="un">用户</span></p></div><a href="/profile" class="btn btn-outline" style="font-size:13px;padding:6px 14px">设置</a></div><div class="user-stats"><div class="user-stat"><div class="icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div class="val" id="s1">0</div><div class="lbl">授权数量</div></div><div class="user-stat"><div class="icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div class="val" id="s2">0</div><div class="lbl">激活实例</div></div><div class="user-stat"><div class="icon amber"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div><div class="val" id="s3">0</div><div class="lbl">待支付</div></div><div class="user-stat"><div class="icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div class="val" id="s4">0</div><div class="lbl">总消费</div></div></div><div class="quick-actions"><a href="/pricing" class="quick-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg><span>购买授权</span></a><a href="/licenses" class="quick-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>我的授权</span></a><a href="/orders" class="quick-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg><span>我的订单</span></a></div><div class="sec"><div class="sec-head"><h2>最近授权</h2><a href="/licenses">查看全部</a></div><div id="ll" class="list"><div class="empty">加载中...</div></div></div><div class="sec"><div class="sec-head"><h2>最近订单</h2><a href="/orders">查看全部</a></div><div id="ol" class="list"><div class="empty">加载中...</div></div></div></div></div></div>`
+  return shell({ title: '控制台', desc: 'ShouYinPOS 用户控制台', html, path: '/dashboard', extra: dashboardJS(apiBase) })
+}
+
+export function licensesPage(env) {
+  const apiBase = (env.SITE_URL || 'https://www.lequ.pw') + '/api'
+  const html = `<div class="user"><div class="user-wrap">${userSide('/licenses')}<div class="user-main"><div class="user-head"><div><h1>我的授权</h1><p class="sub">管理你的授权码和激活实例</p></div><a href="/pricing" class="btn btn-primary" style="font-size:13px;padding:6px 14px">购买新授权</a></div><div id="lg" class="license-grid"><div class="empty">加载中...</div></div></div></div></div>`
+  return shell({ title: '我的授权', desc: '查看授权列表', html, path: '/licenses', extra: licensesJS(apiBase) })
+}
+
+export function ordersPage(env) {
+  const apiBase = (env.SITE_URL || 'https://www.lequ.pw') + '/api'
+  const html = `<div class="user"><div class="user-wrap">${userSide('/orders')}<div class="user-main"><div class="user-head"><div><h1>我的订单</h1><p class="sub">查看所有订单记录</p></div></div><div class="tabs" id="ot"><button class="on" data-s="">全部</button><button data-s="pending">待支付</button><button data-s="paid">已支付</button><button data-s="cancelled">已取消</button></div><div id="ol" class="list"><div class="empty">加载中...</div></div></div></div></div>`
+  return shell({ title: '我的订单', desc: '查看订单列表', html, path: '/orders', extra: ordersJS(apiBase) })
+}
+
+export function profilePage(env) {
+  const apiBase = (env.SITE_URL || 'https://www.lequ.pw') + '/api'
+  const html = `<div class="user"><div class="user-wrap">${userSide('/profile')}<div class="user-main"><div class="user-head"><div><h1>个人设置</h1><p class="sub">管理你的账户信息</p></div></div><div style="max-width:480px"><div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:28px"><form onsubmit="return saveProfile(event)"><div class="fg"><label>邮箱</label><input id="pe" disabled style="background:var(--bg-alt);color:var(--text-3)"><span class="hint">邮箱不可修改</span></div><div class="fg"><label>昵称</label><input id="pn" placeholder="请输入昵称"></div><div class="fg"><label>公司名称</label><input id="pc" placeholder="请输入公司名称"></div><div class="fg"><label>手机号</label><input id="pp" placeholder="请输入手机号"></div><div class="err" id="pr"></div><div id="ps" style="color:var(--accent-emerald);font-size:13px;margin-bottom:10px"></div><button type="submit" class="btn btn-primary btn-full">保存修改</button></form></div></div></div></div></div>`
+  return shell({ title: '个人设置', desc: '修改个人信息', html, path: '/profile', extra: profileJS(apiBase) })
+}
+
+function userSide(current) {
+  const items = [
+    {href:'/dashboard',label:'控制台',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>'},
+    {href:'/licenses',label:'我的授权',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'},
+    {href:'/orders',label:'我的订单',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>'}
+  ]
+  const bottom = [{href:'/profile',label:'个人设置',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'}]
+  return `<div class="user-side"><h3>导航</h3>${items.map(i=>`<a href="${i.href}" class="${current===i.href?'on':''}">${i.icon}${i.label}</a>`).join('')}<div class="div"></div><h3>账户</h3>${bottom.map(i=>`<a href="${i.href}" class="${current===i.href?'on':''}">${i.icon}${i.label}</a>`).join('')}</div>`
+}
+
+function dashboardJS(apiBase){return `<script>var A='${apiBase}';(function(){var t=localStorage.getItem('token');if(!t){location.href='/login';return}var u=JSON.parse(localStorage.getItem('user')||'{}');document.getElementById('un').textContent=u.nickname||u.email||'用户';fetch(A+'/my/licenses',{headers:{Authorization:'Bearer '+t}}).then(function(r){return r.json()}).then(function(d){var l=d.data||[];document.getElementById('s1').textContent=l.length;document.getElementById('s2').textContent=l.reduce(function(s,i){return s+(i.active_instances||0)},0);var el=document.getElementById('ll');if(!l.length){el.innerHTML='<div class="empty">暂无授权 <a href="/pricing">购买授权</a></div>';return}el.innerHTML=l.slice(0,3).map(function(i){return '<div class="item" onclick="location.href=\\'/licenses/'+i.id+'\\'"><div><div class="item-t">'+i.license_key+'</div><div class="item-m">'+{basic:'基础版',pro:'专业版',enterprise:'企业版'}[i.product_edition]+' · '+i.max_stores+' 门店</div></div><div class="item-r"><span class="badge '+(i.status==='active'?'badge-ok':'badge-no')+'">'+(i.status==='active'?'有效':'过期')+'</span></div></div>'}).join('')});fetch(A+'/orders?pageSize=3',{headers:{Authorization:'Bearer '+t}}).then(function(r){return r.json()}).then(function(d){var l=(d.data&&d.data.list)||[];var total=l.reduce(function(s,o){return s+(o.status==='paid'?o.amount:0)},0);document.getElementById('s4').textContent='\\u00a5'+(total/100).toFixed(0);document.getElementById('s3').textContent=l.filter(function(o){return o.status==='pending'}).length;var el=document.getElementById('ol');if(!l.length){el.innerHTML='<div class="empty">暂无订单</div>';return}el.innerHTML=l.map(function(o){return '<div class="item" onclick="location.href=\\'/orders/'+o.order_no+'\\'"><div><div class="item-t">'+o.order_no+'</div><div class="item-m">'+o.plan_name+' · '+new Date(o.created_at).toLocaleDateString()+'</div></div><div class="item-r"><div style="font-weight:600;font-size:14px;margin-bottom:2px">\\u00a5'+(o.amount/100).toFixed(2)+'</div><span class="badge '+(o.status==='paid'?'badge-ok':o.status==='pending'?'badge-wait':'badge-no')+'">'+({pending:'待支付',paid:'已支付',cancelled:'已取消'})[o.status]+'</span></div></div>'}).join('')})})();</script>`}
+
+function licensesJS(apiBase){return `<script>var A='${apiBase}';(function(){var t=localStorage.getItem('token');if(!t){location.href='/login';return}fetch(A+'/my/licenses',{headers:{Authorization:'Bearer '+t}}).then(function(r){return r.json()}).then(function(d){var l=d.data||[],g=document.getElementById('lg'),m={basic:'基础版',pro:'专业版',enterprise:'企业版'};if(!l.length){g.innerHTML='<div class="empty">暂无授权 <a href="/pricing">购买授权</a></div>';return}g.innerHTML=l.map(function(i){return '<div class="lic" onclick="location.href=\\'/licenses/'+i.id+'\\'"><div class="lic-top"><span class="lic-name">'+(m[i.product_edition]||i.product_edition)+'</span><span class="badge '+(i.status==='active'?'badge-ok':'badge-no')+'">'+(i.status==='active'?'有效':'过期')+'</span></div><div class="lic-key">'+i.license_key+'</div><div class="lic-foot"><span>'+(i.active_instances||0)+'/'+i.max_stores+' 门店</span><span>到期 '+new Date(i.valid_until).toLocaleDateString()+'</span></div></div>'}).join('')})})();</script>`}
+
+function ordersJS(apiBase){return `<script>var A='${apiBase}',cs='';function load(){var t=localStorage.getItem('token');if(!t){location.href='/login';return}fetch(A+'/orders'+(cs?'?status='+cs:''),{headers:{Authorization:'Bearer '+t}}).then(function(r){return r.json()}).then(function(d){var l=(d.data&&d.data.list)||[],el=document.getElementById('ol');if(!l.length){el.innerHTML='<div class="empty">暂无订单</div>';return}el.innerHTML=l.map(function(o){return '<div class="item" onclick="location.href=\\'/orders/'+o.order_no+'\\'"><div><div class="item-t">'+o.order_no+'</div><div class="item-m">'+o.plan_name+' · '+new Date(o.created_at).toLocaleDateString()+'</div></div><div class="item-r"><div style="font-weight:600;font-size:14px;margin-bottom:2px">\\u00a5'+(o.amount/100).toFixed(2)+'</div><span class="badge '+(o.status==='paid'?'badge-ok':o.status==='pending'?'badge-wait':'badge-no')+'">'+({pending:'待支付',paid:'已支付',cancelled:'已取消'})[o.status]+'</span></div></div>'}).join('')})}document.getElementById('ot').onclick=function(e){if(e.target.tagName!=='BUTTON')return;document.querySelectorAll('#ot button').forEach(function(b){b.classList.remove('on')});e.target.classList.add('on');cs=e.target.dataset.s;load()};load();</script>`}
+
+function profileJS(apiBase){return `<script>var A='${apiBase}';(function(){var t=localStorage.getItem('token');if(!t){location.href='/login';return}var u=JSON.parse(localStorage.getItem('user')||'{}');document.getElementById('pe').value=u.email||'';document.getElementById('pn').value=u.nickname||'';document.getElementById('pc').value=u.company||'';document.getElementById('pp').value=u.phone||''})();function saveProfile(e){e.preventDefault();var t=localStorage.getItem('token'),er=document.getElementById('pr'),ok=document.getElementById('ps');er.textContent='';ok.textContent='';var d={nickname:document.getElementById('pn').value,company:document.getElementById('pc').value,phone:document.getElementById('pp').value};fetch(A+'/user/me',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+t},body:JSON.stringify(d)}).then(function(r){return r.json()}).then(function(d){if(d.code){er.textContent=d.message;return}ok.textContent='修改成功';fetch(A+'/user/me',{headers:{Authorization:'Bearer '+t}}).then(function(r){return r.json()}).then(function(d){if(d.data)localStorage.setItem('user',JSON.stringify(d.data))})});return false}</script>`}

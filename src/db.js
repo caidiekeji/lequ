@@ -3,23 +3,30 @@
  * 封装常用查询方法、初始化逻辑、审计日志创建。
  */
 
-import { sha256, generateLicenseKey } from '../utils.js'
+import { sha256, generateLicenseKey, hashPassword } from './utils.js'
+
+let databaseInitialized = false
 
 /**
- * 初始化数据库：创建默认管理员账号
+ * 初始化数据库：创建默认管理员账号（仅首次调用生效）
  * @param {D1Database} db - D1 数据库实例
  * @param {Object} env - 环境变量
  */
 export async function initDatabase(db, env) {
-  // 检查是否需要创建管理员
+  if (databaseInitialized) return
+  databaseInitialized = true
+
   const adminCount = await db.prepare('SELECT COUNT(*) as cnt FROM admins').first()
   if (adminCount.cnt === 0) {
-    const { hashPassword } = await import('../utils.js')
-    const passwordHash = await hashPassword(env.ADMIN_PASSWORD || 'admin123')
-    await db.prepare(
-      "INSERT INTO admins (username, password_hash, role) VALUES (?, ?, 'super_admin')"
-    ).bind('admin', passwordHash).run()
-    console.log('[Init] 默认管理员已创建: admin')
+    try {
+      const passwordHash = await hashPassword(env.ADMIN_PASSWORD || 'admin123')
+      await db.prepare(
+        "INSERT INTO admins (username, password_hash, role) VALUES (?, ?, 'super_admin')"
+      ).bind('admin', passwordHash).run()
+      console.log('[Init] 默认管理员已创建: admin')
+    } catch (e) {
+      console.warn('[Init] 创建管理员失败（可能已存在）:', e.message)
+    }
   }
 }
 
@@ -27,12 +34,11 @@ export async function initDatabase(db, env) {
 
 /**
  * 创建授权码
+ * 修复缺陷 #7：限额完全由 plans 表驱动（删除 EDITIONS 硬编码字典）
  * @param {D1Database} db
- * @param {Object} data - 授权信息
+ * @param {Object} data - 授权信息（需含 max_stores/max_terminals/max_products/max_members/features）
  */
 export async function createLicense(db, data) {
-  const edition = EDITIONS[data.product_edition] || EDITIONS.basic
-
   // 生成唯一授权码
   let licenseKey
   let exists = true
@@ -44,10 +50,10 @@ export async function createLicense(db, data) {
 
   const validFrom = new Date()
   const validUntil = new Date(validFrom.getTime() + data.valid_days * 24 * 60 * 60 * 1000)
-  const features = JSON.stringify(data.features || edition.features)
-  const maxTerminals = data.max_terminals ?? edition.max_terminals
-  const maxProducts = data.max_products ?? edition.max_products
-  const maxMembers = data.max_members ?? edition.max_members
+  const features = JSON.stringify(data.features || [])
+  const maxTerminals = data.max_terminals ?? 1
+  const maxProducts = data.max_products ?? 5000
+  const maxMembers = data.max_members ?? 2000
 
   const result = await db.prepare(`
     INSERT INTO licenses (license_key, product_edition, max_stores, max_terminals,
@@ -138,12 +144,37 @@ export async function heartbeatLicense(db, instanceId, hardwareFingerprint) {
     return { success: false, status: 'revoked', message: '授权已被停用' }
   }
 
+  // 指纹不匹配（strict 模式）：累加失败计数，达到阈值则置为 offline
   if (lic.bind_mode === 'strict' && inst.hardware_fingerprint !== hardwareFingerprint) {
+    const newCount = (inst.heartbeat_fail_count || 0) + 1
+
+    // 获取失败阈值：优先从 license_policies 读取，默认 3
+    let threshold = 3
+    if (lic.policy_id) {
+      try {
+        const policy = await db.prepare('SELECT heartbeat_fail_threshold FROM license_policies WHERE id = ?').bind(lic.policy_id).first()
+        if (policy && policy.heartbeat_fail_threshold != null) {
+          threshold = policy.heartbeat_fail_threshold
+        }
+      } catch (e) { /* 降级使用默认值 */ }
+    }
+
+    if (newCount >= threshold) {
+      await db.prepare(
+        "UPDATE license_instances SET heartbeat_fail_count = ?, status = 'offline', updated_at = datetime('now') WHERE id = ?"
+      ).bind(newCount, inst.id).run()
+      return { success: false, status: 'offline', message: `心跳指纹不匹配超过${threshold}次，实例已离线` }
+    }
+
+    await db.prepare(
+      "UPDATE license_instances SET heartbeat_fail_count = ?, updated_at = datetime('now') WHERE id = ?"
+    ).bind(newCount, inst.id).run()
     return { success: false, status: 'fingerprint_mismatch', message: '硬件指纹不匹配，请重新激活' }
   }
 
+  // 正常心跳：重置失败计数，更新最后心跳时间
   await db.prepare(
-    "UPDATE license_instances SET last_heartbeat = datetime('now') WHERE id = ?"
+    "UPDATE license_instances SET last_heartbeat = datetime('now'), heartbeat_fail_count = 0 WHERE id = ?"
   ).bind(inst.id).run()
 
   return { success: true }
@@ -185,6 +216,11 @@ export async function getInstanceStatus(db, instanceId) {
  * 获取授权码列表（分页）
  */
 export async function getLicenseList(db, { page = 1, pageSize = 20, status, keyword } = {}) {
+  page = Math.max(parseInt(page) || 1, 1)
+  pageSize = Math.min(Math.max(parseInt(pageSize) || 20, 1), 100)
+  const p = Math.max(parseInt(page) || 1, 1)
+  const ps = Math.min(Math.max(parseInt(pageSize) || 20, 1), 100)
+
   const conditions = []
   const params = []
 
@@ -199,7 +235,7 @@ export async function getLicenseList(db, { page = 1, pageSize = 20, status, keyw
   }
 
   const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : ''
-  const offset = (page - 1) * pageSize
+  const offset = (p - 1) * ps
 
   const totalResult = await db.prepare('SELECT COUNT(*) as cnt FROM licenses l ' + where).bind(...params).first()
   const total = totalResult.cnt
@@ -212,9 +248,9 @@ export async function getLicenseList(db, { page = 1, pageSize = 20, status, keyw
     GROUP BY l.id
     ORDER BY l.created_at DESC
     LIMIT ? OFFSET ?
-  `).bind(...params, pageSize, offset).all()
+  `).bind(...params, ps, offset).all()
 
-  return { list: list.results, total }
+  return { list: list.results, total, page: p, pageSize: ps }
 }
 
 /**
@@ -286,7 +322,7 @@ export async function getDashboardStats(db) {
 /**
  * 创建审计日志（哈希链防篡改）
  */
-async function createAuditLog(db, licenseId, instanceId, action, detail) {
+export async function createAuditLog(db, licenseId, instanceId, action, detail) {
   const prev = await db.prepare(
     'SELECT row_hash FROM license_audit_logs ORDER BY id DESC LIMIT 1'
   ).first()
@@ -303,11 +339,5 @@ async function createAuditLog(db, licenseId, instanceId, action, detail) {
   `).bind(licenseId, instanceId, action, detailStr, prevHash, rowHash, timestamp).run()
 }
 
-// ==================== 版本定义 ====================
-
-const EDITIONS = {
-  basic: { name: '基础版', max_terminals: 1, max_products: 5000, max_members: 2000, features: ['base'] },
-  standard: { name: '标准版', max_terminals: 3, max_products: 10000, max_members: 5000, features: ['base', 'member', 'promotion'] },
-  premium: { name: '高级版', max_terminals: 10, max_products: 50000, max_members: 20000, features: ['base', 'member', 'promotion', 'report', 'stock', 'supplier'] },
-  enterprise: { name: '企业版', max_terminals: -1, max_products: -1, max_members: -1, features: ['*'] },
-}
+// ==================== 版本定义已移除（缺陷 #7 修复） ====================
+// 限额完全由 plans 表驱动，不再依赖 EDITIONS 硬编码字典

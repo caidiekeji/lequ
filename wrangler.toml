@@ -22,21 +22,32 @@ compatibility_flags = ["nodejs_compat"]
 # 将输出的 database_id 复制到下方
 [[d1_databases]]
 binding = "DB"
-database_name = "shouquan-db"
-database_id = "CHANGE_ME_TO_YOUR_D1_DATABASE_ID"
+database_name = "lequ"
+database_id = "af26aefa-1300-4bda-94bc-174b96664236"
+preview_database_id = "577571fe-75c8-4c28-8634-49dd0d6fff83"
 
 # ===== 环境变量 =====
+# 敏感信息通过 Cloudflare Dashboard 或 Secrets 管理（wrangler secret put）
+# Dashboard: Workers & Pages → shouquan → Settings → Variables
+# JWT_SECRET / ADMIN_PASSWORD / V1_API_SECRET / V1_API_KEY 须通过 wrangler secret put 设置
 [vars]
-JWT_SECRET = "change_me_to_a_random_string_at_least_32_chars"  # 部署前修改
-ADMIN_PASSWORD = "admin123"                                      # 首次部署后请修改密码
 SITE_NAME = "ShouYinPOS"
-SITE_URL = "https://your-site.pages.dev"
 
-# ===== 预分频 =====
-# routes = ["shouquan.example.com/*"]
+# ===== Cron Triggers =====
+[triggers]
+crons = ["0 * * * *", "0 8 * * *"]
+
+# ===== 路由（自定义域名已通过 Dashboard 绑定） =====
+# Worker 域名: www.lequ.pw
+# Pages 域名:  api.xiniu.qzz.io
 
 # ===== Pages 集成部署 =====
 # admin SPA 部署方式：
 #   1. cd admin && npm run build
 #   2. npx wrangler pages deploy dist --project-name=shouquan-admin
+#   3. 在 Cloudflare Dashboard 中设置自定义域名
+#
+# web 用户端部署方式：
+#   1. cd web && npm run build
+#   2. npx wrangler pages deploy dist --project-name=shouquan-web
 #   3. 在 Cloudflare Dashboard 中设置自定义域名

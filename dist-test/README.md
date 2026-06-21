@@ -1,0 +1,1 @@
+This folder contains the built output assets for the worker "shouquan" generated at 2026-06-20T18:33:37.416Z.

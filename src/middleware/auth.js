@@ -17,7 +17,11 @@ export async function authenticate(c, next) {
     return c.json({ code: 40101, message: '登录已过期或无效，请重新登录' }, 401)
   }
 
-  // 将管理员信息附加到上下文
+  // 拒绝用户 token 访问管理接口
+  if (payload.type === 'user') {
+    return c.json({ code: 40102, message: '权限不足' }, 403)
+  }
+
   c.set('admin', { id: payload.id, username: payload.username, role: payload.role })
   await next()
 }

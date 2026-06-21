@@ -33,8 +33,8 @@ router.get('/dashboard', async (c) => {
 router.get('/licenses', async (c) => {
   const { page, pageSize, status, keyword } = c.req.query()
   const result = await getLicenseList(c.env.DB, {
-    page: parseInt(page) || 1,
-    pageSize: parseInt(pageSize) || 20,
+    page: Math.max(parseInt(page) || 1, 1),
+    pageSize: Math.min(Math.max(parseInt(pageSize) || 20, 1), 100),
     status,
     keyword,
   })
